@@ -1,4 +1,4 @@
-![image](https://github.com/partiusfabaa/cs2-advertisement/assets/96542489/5d247f80-ab48-4e3c-a949-eefd64f23c46)# cs2-advertisement
+# cs2-advertisement
 A plugin for cs2 that allows you to show ads in chat/center/panel
 
 # Installation
