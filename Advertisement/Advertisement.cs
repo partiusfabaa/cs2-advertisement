@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -11,24 +12,61 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Advertisement;
 
-public class Advertisement : BasePlugin
+public class Ads : BasePlugin
 {
     public override string ModuleName => "Advertisement by thesamefabius";
-    public override string ModuleVersion => "v1.0.0";
+    public override string ModuleVersion => "v1.0.1";
 
-    private Advert _config = null!;
-
-    private int _chatCount;
-    private int _centerCount;
     private int _panelCount;
-    private Timer _timer = null!;
+    private Config _config = null!;
+    private readonly List<Timer> _timers = new();
 
     public override void Load(bool hotReload)
     {
         _config = LoadConfig();
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound);
+        StartTimers();
+    }
 
-        _timer = AddTimer(_config.Delay, TimerAdvertisement, TimerFlags.REPEAT);
+    private void ShowAd(Advertisement ad)
+    {
+        var messages = ad.NextMessages;
+
+        foreach (var (type, message) in messages)
+        {
+            switch (type)
+            {
+                case "Chat":
+                    PrintWrappedLine(HudDestination.Chat, message);
+                    break;
+                case "Center":
+                    PrintWrappedLine(HudDestination.Center, message);
+                    break;
+            }
+        }
+    }
+
+    public void StartTimers()
+    {
+        foreach (var ad in _config.Ads)
+        {
+            _timers.Add(AddTimer(ad.Interval, () => ShowAd(ad), TimerFlags.REPEAT));
+        }
+    }
+
+    private HookResult EventCsWinPanelRound(EventCsWinPanelRound handle, GameEventInfo info)
+    {
+        var panel = _config.Panel;
+
+        if (panel.Count == 0) return HookResult.Continue;
+
+        if (_panelCount >= panel.Count) _panelCount = 0;
+
+        handle.FunfactToken = panel[_panelCount];
+        handle.TimerTime = 5;
+        _panelCount++;
+
+        return HookResult.Continue;
     }
 
     [ConsoleCommand("css_advert_reload", "configuration restart")]
@@ -42,12 +80,13 @@ public class Advertisement : BasePlugin
                 return;
             }
         }
-
+            
         _config = LoadConfig();
 
-        _timer.Kill();
-        _timer = AddTimer(_config.Delay, TimerAdvertisement, TimerFlags.REPEAT);
-
+        foreach (var timer in _timers) timer.Kill();
+        _timers.Clear();
+        StartTimers();
+            
         const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
 
         if (controller == null)
@@ -56,50 +95,18 @@ public class Advertisement : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void TimerAdvertisement()
-    {
-        var chat = _config.MessageSections.Chat;
-        var center = _config.MessageSections.Center;
-
-        if (chat.Count != 0)
-        {
-            if (_chatCount >= chat.Count) _chatCount = 0;
-
-            PrintWrappedLine(HudDestination.Chat, chat[_chatCount]);
-            _chatCount++;
-        }
-
-        if (center.Count != 0)
-        {
-            if (_centerCount >= center.Count) _centerCount = 0;
-
-            var centerMsg = ReplaceMessageTags(center[_centerCount]);
-            VirtualFunctions.ClientPrintAll(HudDestination.Center, centerMsg, 0, 0, 0, 0);
-            _centerCount++;
-        }
-    }
-
     private void PrintWrappedLine(HudDestination destination, string message)
     {
-        var parts = ReplaceMessageTags(message).Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-        foreach (var part in parts)
-            VirtualFunctions.ClientPrintAll(destination, $" {part}", 0, 0, 0, 0);
-    }
+        message = ReplaceMessageTags(message);
 
-
-    private HookResult EventCsWinPanelRound(EventCsWinPanelRound handle, GameEventInfo info)
-    {
-        var panel = _config.MessageSections.Panel;
-
-        if (panel.Count == 0) return HookResult.Continue;
-
-        if (_panelCount >= panel.Count) _panelCount = 0;
-
-        handle.FunfactToken = panel[_panelCount];
-        handle.TimerTime = 5;
-        _panelCount++;
-
-        return HookResult.Continue;
+        if (destination != HudDestination.Center)
+        {
+            var parts = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            foreach (var part in parts)
+                VirtualFunctions.ClientPrintAll(destination, $" {part}", 0, 0, 0, 0);
+        }
+        else
+            VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
     }
 
     private string ReplaceMessageTags(string message)
@@ -107,7 +114,10 @@ public class Advertisement : BasePlugin
         var replacedMessage = message
             .Replace("{MAP}", NativeAPI.GetMapName())
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
-            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"));
+            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
+            .Replace("{N}", "\n");
+
+        replacedMessage = ReplaceColorTags(replacedMessage);
 
         return replacedMessage;
     }
@@ -131,49 +141,61 @@ public class Advertisement : BasePlugin
         return input;
     }
 
-    private Advert LoadConfig()
+    private Config LoadConfig()
     {
         var configPath = Path.Combine(ModuleDirectory, "advertisement.json");
 
         if (!File.Exists(configPath)) return CreateConfig(configPath);
 
-        var config = JsonSerializer.Deserialize<Advert>(File.ReadAllText(configPath))!;
-
-        var messages = config.MessageSections;
-
-        for (var i = 0; i < messages.Chat.Count; i++)
-        {
-            messages.Chat[i] = ReplaceColorTags(messages.Chat[i]);
-        }
-
-        for (var i = 0; i < messages.Center.Count; i++)
-        {
-            messages.Center[i] = ReplaceColorTags(messages.Center[i]);
-        }
-
-        for (var i = 0; i < messages.Panel.Count; i++)
-        {
-            messages.Panel[i] = ReplaceColorTags(messages.Panel[i]);
-        }
+        var config = JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath))!;
 
         return config;
     }
 
-    private Advert CreateConfig(string configPath)
+    private Config CreateConfig(string configPath)
     {
-        var config = new Advert
+        var config = new Config
         {
-            Admins = new List<ulong> { 76543199045778423 },
-            Delay = 40.0f,
-            MessageSections = new MessageSections
+            Admins = new List<ulong>
             {
-                Chat = new List<string>
-                    { "Chat Advertising 1", "Chat Advertising 2", "Chat Advertising 3" },
-                Center = new List<string>
-                    { "Center Advertising 1", "Center Advertising 2", "Center Advertising 3" },
-                Panel = new List<string>
-                    { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" },
-            }
+                76561199096378663
+            },
+            Ads = new List<Advertisement>
+            {
+                new()
+                {
+                    Interval = 5,
+                    Messages = new List<Dictionary<string, string>>()
+                    {
+                        new()
+                        {
+                            ["Chat"] = "Section 1 Chat 1",
+                            ["Center"] = "Section 1 Center 1"
+                        },
+                        new()
+                        {
+                            ["Chat"] = "Section 1 Chat 2"
+                        },
+                    }
+                },
+                new()
+                {
+                    Interval = 10,
+                    Messages = new List<Dictionary<string, string>>()
+                    {
+                        new()
+                        {
+                            ["Chat"] = "Section 2 Chat 1"
+                        },
+                        new()
+                        {
+                            ["Chat"] = "Section 2 Chat 2",
+                            ["Center"] = "Section 2 Center 1"
+                        },
+                    }
+                }
+            },
+            Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" }
         };
 
         File.WriteAllText(configPath, JsonSerializer.Serialize(config));
@@ -186,16 +208,20 @@ public class Advertisement : BasePlugin
     }
 }
 
-public class Advert
+public class Config
 {
     public required List<ulong> Admins { get; set; }
-    public float Delay { get; set; }
-    public required MessageSections MessageSections { get; set; }
+    public List<Advertisement> Ads { get; set; }
+    public List<string> Panel { get; set; }
 }
 
-public class MessageSections
+public class Advertisement
 {
-    public List<string> Chat { get; init; } = null!;
-    public List<string> Center { get; init; } = null!;
-    public List<string> Panel { get; init; } = null!;
+    public float Interval { get; set; }
+    public List<Dictionary<string, string>> Messages { get; set; }
+
+    private int _currentMessageIndex;
+
+    [JsonIgnore]
+    public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
 }
