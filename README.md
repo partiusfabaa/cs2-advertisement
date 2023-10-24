@@ -31,6 +31,16 @@ The config is created automatically in the same place where the dll is located
 	]
     }
 }
+
+CHAT COLORS: {DEFAULT}, {RED}, {LIGHTPURPLE}, {GREEN}, {LIME}, {LIGHTGREEN}, {LIGHTRED}, {GRAY}, {LIGHTOLIVE}, {OLIVE}, {LIGHTBLUE}, {BLUE}, {PURPLE}, {GRAYBLUE}
+	
+PANEL COLORS: <font color='HEXCOLOR'>TEXT</font>
+	
+TAGS:
+	{MAP} 	- current map
+	{TIME} 	- server time
+	{DATE} 	- current date
+	\n		- new line
 ```
 
 # Images
