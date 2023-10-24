@@ -32,5 +32,16 @@ The config is created automatically in the same place where the dll is located
     }
 }
 ```
+
+# Images
+CHAT:
+![image](https://github.com/partiusfabaa/cs2-advertisement/assets/96542489/c6b008b4-9b66-4d8a-9cd8-c40505d0f1c3)
+
+CENTER:
+![image](https://github.com/partiusfabaa/cs2-advertisement/assets/96542489/5f56cb66-6aac-423a-b7d0-efa066e37da4)
+
+PANEL:
+![image](https://github.com/partiusfabaa/cs2-advertisement/assets/96542489/cd1e788f-9e8e-4276-a90c-e08d8adb21f5)
+
 # Commands
 `css_advert_reload` - reloads the configuration. Only for those specified in the configuration
