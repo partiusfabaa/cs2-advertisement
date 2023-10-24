@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <Reference Include="CounterStrikeSharp.API">
-      <HintPath>..\CounterStrikeSharp.API.dll</HintPath>
+      <HintPath>CounterStrikeSharp.API.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
