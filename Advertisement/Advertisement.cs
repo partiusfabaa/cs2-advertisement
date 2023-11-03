@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
@@ -103,10 +104,10 @@ public class Ads : BasePlugin
         {
             var parts = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             foreach (var part in parts)
-                VirtualFunctions.ClientPrintAll(destination, $" {part}", 0, 0, 0, 0);
+                Server.PrintToChatAll($" {part}");
         }
         else
-            VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
+            Server.PrintToChatAll($" {message}");
     }
 
     private string ReplaceMessageTags(string message)
@@ -114,8 +115,7 @@ public class Ads : BasePlugin
         var replacedMessage = message
             .Replace("{MAP}", NativeAPI.GetMapName())
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
-            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
-            .Replace("{N}", "\n");
+            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"));
 
         replacedMessage = ReplaceColorTags(replacedMessage);
 
