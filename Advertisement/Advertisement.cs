@@ -198,7 +198,7 @@ public class Ads : BasePlugin
             Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" }
         };
 
-        File.WriteAllText(configPath, JsonSerializer.Serialize(config));
+        File.WriteAllText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
 
         Console.ForegroundColor = ConsoleColor.DarkGreen;
         Console.WriteLine("[Advertisement] The configuration was successfully saved to a file: " + configPath);
