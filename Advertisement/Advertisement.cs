@@ -164,7 +164,7 @@ public class Ads : BasePlugin
             {
                 new()
                 {
-                    Interval = 5,
+                    Interval = 35,
                     Messages = new List<Dictionary<string, string>>()
                     {
                         new()
@@ -180,7 +180,7 @@ public class Ads : BasePlugin
                 },
                 new()
                 {
-                    Interval = 10,
+                    Interval = 40,
                     Messages = new List<Dictionary<string, string>>()
                     {
                         new()
