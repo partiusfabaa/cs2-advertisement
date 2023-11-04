@@ -1,0 +1,35 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/modules.xml
+/contentModel.xml
+/projectSettingsUpdater.xml
+/.idea.LRMini.iml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+LRMini/.idea
+*.user
+*.cache
+*.editorconfig
+LRMini/obj/Debug/net7.0/LRMini.AssemblyInfo.cs
+LRMini/obj/Debug/net7.0/.NETCoreApp,Version=v7.0.AssemblyAttributes.cs
+LRMini/obj/Debug/net7.0/LRMini.GlobalUsings.g.cs
+LRMini/obj/LRMini.csproj.nuget.dgspec.json
+LRMini/obj/LRMini.csproj.nuget.g.props
+LRMini/obj/LRMini.csproj.nuget.g.targets
+LRMini/obj/project.assets.json
+LRMini/obj/project.packagespec.json
+LRMini/obj/rider.project.restore.info
+*.dll
+*.json
+*.pdb
+*.CopyComplete
+*.txt
+LRMini/obj/release/net7.0/.NETCoreApp,Version=v7.0.AssemblyAttributes.cs
+LRMini/obj/release/net7.0/LRMini.AssemblyInfo.cs
+LRMini/obj/release/net7.0/LRMini.GlobalUsings.g.cs
+LRMini/obj/LRMini.csproj.EntityFrameworkCore.targets
