@@ -107,7 +107,7 @@ public class Ads : BasePlugin
                 Server.PrintToChatAll($" {part}");
         }
         else
-            Server.PrintToChatAll($" {message}");
+            VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
     }
 
     private string ReplaceMessageTags(string message)
