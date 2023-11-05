@@ -7,6 +7,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -26,6 +27,7 @@ public class Ads : BasePlugin
     {
         _config = LoadConfig();
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound);
+
         StartTimers();
     }
 
@@ -81,13 +83,13 @@ public class Ads : BasePlugin
                 return;
             }
         }
-            
+
         _config = LoadConfig();
 
         foreach (var timer in _timers) timer.Kill();
         _timers.Clear();
         StartTimers();
-            
+
         const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
 
         if (controller == null)
@@ -113,7 +115,7 @@ public class Ads : BasePlugin
     private string ReplaceMessageTags(string message)
     {
         var replacedMessage = message
-            .Replace("{MAP}", NativeAPI.GetMapName())
+            .Replace("{MAP}", NativeAPI.GetMapName()) 
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
             .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"));
 
@@ -198,7 +200,8 @@ public class Ads : BasePlugin
             Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" }
         };
 
-        File.WriteAllText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(configPath,
+            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
 
         Console.ForegroundColor = ConsoleColor.DarkGreen;
         Console.WriteLine("[Advertisement] The configuration was successfully saved to a file: " + configPath);
@@ -222,6 +225,5 @@ public class Advertisement
 
     private int _currentMessageIndex;
 
-    [JsonIgnore]
-    public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
+    [JsonIgnore] public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
 }
