@@ -53,6 +53,9 @@ TAGS:
 	{MAP} 	- current map
 	{TIME} 	- server time
 	{DATE} 	- current date
+	{SERVERNAME} - server name
+	{IP} - server ip
+	{PORT} - server port
 	\n		- new line
 ```
 
