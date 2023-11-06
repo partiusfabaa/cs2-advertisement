@@ -22,7 +22,6 @@ public class Ads : BasePlugin
     private int _panelCount;
     private Config _config = null!;
     private readonly List<Timer> _timers = new();
-
     public override void Load(bool hotReload)
     {
         _config = LoadConfig();
@@ -117,7 +116,10 @@ public class Ads : BasePlugin
         var replacedMessage = message
             .Replace("{MAP}", NativeAPI.GetMapName()) 
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
-            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"));
+            .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
+            .Replace("{SERVERNAME}", ConVar.Find("hostname")!.StringValue)
+            .Replace("{IP}", ConVar.Find("ip")!.StringValue)
+            .Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString());
 
         replacedMessage = ReplaceColorTags(replacedMessage);
 
