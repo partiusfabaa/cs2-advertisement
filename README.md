@@ -17,7 +17,7 @@ The config is created automatically in the same place where the dll is located
       "Messages": [
         {
           "Chat": "IP: {RED}{IP}:{PORT}",// Chat advertising
-          "Center": "Center Advertising 1" 		// Advertising in the center
+          "Center": "Server name: {SERVERNAME}" 		// Advertising in the center
         },
         {
           "Chat": "Chat Advertising 3",
