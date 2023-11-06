@@ -16,7 +16,7 @@ The config is created automatically in the same place where the dll is located
       "Interval": 35,			//a timer after which the advertisement will be shown
       "Messages": [
         {
-          "Chat": "{RED}Chat {BLUE}Advertising {GREEN}1",// Chat advertising
+          "Chat": "IP: {RED}{IP}:{PORT}",// Chat advertising
           "Center": "Center Advertising 1" 		// Advertising in the center
         },
         {
