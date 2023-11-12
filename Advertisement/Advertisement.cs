@@ -17,7 +17,7 @@ namespace Advertisement;
 public class Ads : BasePlugin
 {
     public override string ModuleName => "Advertisement by thesamefabius";
-    public override string ModuleVersion => "v1.0.1";
+    public override string ModuleVersion => "v1.0.3";
 
     private int _panelCount;
     private Config _config = null!;
@@ -48,7 +48,7 @@ public class Ads : BasePlugin
         }
     }
 
-    public void StartTimers()
+    private void StartTimers()
     {
         foreach (var ad in _config.Ads)
         {
@@ -63,7 +63,7 @@ public class Ads : BasePlugin
         if (panel.Count == 0) return HookResult.Continue;
 
         if (_panelCount >= panel.Count) _panelCount = 0;
-
+        
         handle.FunfactToken = panel[_panelCount];
         handle.TimerTime = 5;
         _panelCount++;
