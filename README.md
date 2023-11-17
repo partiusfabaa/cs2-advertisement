@@ -3,7 +3,7 @@ A plugin for cs2 that allows you to show ads in chat/center/panel
 
 # Installation
 1. Install [CounterStrike Sharp](https://github.com/roflmuffin/CounterStrikeSharp) and [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master)
-3. Download [Advertisement](https://github.com/partiusfabaa/cs2-advertisement/releases/tag/v1.0.1)
+3. Download [Advertisement](https://github.com/partiusfabaa/cs2-advertisement/releases/tag/v1.0.4)
 4. Unzip the archive and upload it to the game server
 
 # Config
@@ -11,6 +11,7 @@ The config is created automatically in the same place where the dll is located
 ```
 {
   "Admins":[76561199096378663],		// Write your SteamID64 here to reload the configuration. If you want to add more than 1, write them separated by commas
+  "PrintToCenterHtml": false, 	// if true, the text displayed in CENTER can use html
   "Ads": [
     {
       "Interval": 35,			//a timer after which the advertisement will be shown
@@ -56,6 +57,8 @@ TAGS:
 	{SERVERNAME} - server name
 	{IP} - server ip
 	{PORT} - server port
+	{PLAYERS} - number of players on the server
+	{MAXPLAYERS} - how many slots are available on the server
 	\n		- new line
 ```
 
