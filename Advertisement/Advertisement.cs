@@ -17,15 +17,16 @@ namespace Advertisement;
 public class Ads : BasePlugin
 {
     public override string ModuleName => "Advertisement by thesamefabius";
-    public override string ModuleVersion => "v1.0.3";
+    public override string ModuleVersion => "v1.0.4";
 
     private int _panelCount;
     private Config _config = null!;
     private readonly List<Timer> _timers = new();
+
     public override void Load(bool hotReload)
     {
         _config = LoadConfig();
-        RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound);
+        RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
 
         StartTimers();
     }
@@ -63,12 +64,12 @@ public class Ads : BasePlugin
         if (panel.Count == 0) return HookResult.Continue;
 
         if (_panelCount >= panel.Count) _panelCount = 0;
-        
-        handle.FunfactToken = panel[_panelCount];
+
+        handle.FunfactToken = ReplaceMessageTags(panel[_panelCount]);
         handle.TimerTime = 5;
         _panelCount++;
 
-        return HookResult.Continue;
+        return HookResult.Changed;
     }
 
     [ConsoleCommand("css_advert_reload", "configuration restart")]
@@ -108,18 +109,26 @@ public class Ads : BasePlugin
                 Server.PrintToChatAll($" {part}");
         }
         else
-            VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
+        {
+            if(_config.PrintToCenterHtml)
+                foreach (var player in Utilities.GetPlayers())
+                    player.PrintToCenterHtml($"{message}");
+            else
+                VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
+        }
     }
 
     private string ReplaceMessageTags(string message)
     {
         var replacedMessage = message
-            .Replace("{MAP}", NativeAPI.GetMapName()) 
+            .Replace("{MAP}", NativeAPI.GetMapName())
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
             .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
             .Replace("{SERVERNAME}", ConVar.Find("hostname")!.StringValue)
             .Replace("{IP}", ConVar.Find("ip")!.StringValue)
-            .Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString());
+            .Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString())
+            .Replace("{MAXPLAYERS}", Server.MaxPlayers.ToString())
+            .Replace("{PLAYERS}", Utilities.GetPlayers().Count.ToString());
 
         replacedMessage = ReplaceColorTags(replacedMessage);
 
@@ -164,6 +173,7 @@ public class Ads : BasePlugin
             {
                 76561199096378663
             },
+            PrintToCenterHtml = false,
             Ads = new List<Advertisement>
             {
                 new()
@@ -216,14 +226,15 @@ public class Ads : BasePlugin
 public class Config
 {
     public required List<ulong> Admins { get; set; }
-    public List<Advertisement> Ads { get; set; }
-    public List<string> Panel { get; set; }
+    public bool PrintToCenterHtml { get; set; }
+    public List<Advertisement> Ads { get; set; } = null!;
+    public List<string> Panel { get; set; } = null!;
 }
 
 public class Advertisement
 {
-    public float Interval { get; set; }
-    public List<Dictionary<string, string>> Messages { get; set; }
+    public float Interval { get; init; }
+    public List<Dictionary<string, string>> Messages { get; init; } = null!;
 
     private int _currentMessageIndex;
 
