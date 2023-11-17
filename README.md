@@ -36,7 +36,7 @@ The config is created automatically in the same place where the dll is located
         {
           "Chat": "{RED}Chat {BLUE}Advertising {GREEN}4"
         }
-      ]
+      ] 
     }
   ],
   "Panel":[
