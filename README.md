@@ -10,8 +10,11 @@ A plugin for cs2 that allows you to show ads in chat/center/panel
 The config is created automatically in the same place where the dll is located
 ```
 {
-  "Admins":[76561199096378663],		// Write your SteamID64 here to reload the configuration. If you want to add more than 1, write them separated by commas
   "PrintToCenterHtml": false, 	// if true, the text displayed in CENTER can use html
+  "WelcomeMessage": {
+    "MessageType": 0,                              //0 - CHAT | 1 - CENTER | 2 - CENTER HTML
+    "Message": "{RED}Welcome, {GREEN}{PLAYERNAME}" //The text that the player will see can use color tags and the `{PLAYERNAME}` tag.
+  },
   "Ads": [
     {
       "Interval": 35,			//a timer after which the advertisement will be shown
@@ -73,4 +76,4 @@ PANEL:
 ![image](https://github.com/partiusfabaa/cs2-advertisement/assets/96542489/cd1e788f-9e8e-4276-a90c-e08d8adb21f5)
 
 # Commands
-`css_advert_reload` - reloads the configuration. Only for those specified in the configuration
+`css_advert_reload` - reloads the configuration. The `@css/root` flag is required for use.
