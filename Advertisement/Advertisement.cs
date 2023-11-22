@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory;
@@ -16,8 +17,9 @@ namespace Advertisement;
 
 public class Ads : BasePlugin
 {
-    public override string ModuleName => "Advertisement by thesamefabius";
-    public override string ModuleVersion => "v1.0.4";
+    public override string ModuleAuthor => "thesamefabius";
+    public override string ModuleName => "Advertisement";
+    public override string ModuleVersion => "v1.0.5";
 
     private int _panelCount;
     private Config _config = null!;
@@ -27,8 +29,37 @@ public class Ads : BasePlugin
     {
         _config = LoadConfig();
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
+        RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
 
         StartTimers();
+    }
+
+    private HookResult EventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
+    {
+        if (_config.WelcomeMessage == null) return HookResult.Continue;
+
+        var player = @event.Userid;
+
+        if (!player.IsValid) return HookResult.Continue;
+
+        var welcomeMsg = _config.WelcomeMessage;
+
+        var msg = ReplaceColorTags(welcomeMsg.Message).Replace("{PLAYERNAME}", player.PlayerName);
+
+        switch (welcomeMsg.MessageType)
+        {
+            case 0:
+                player.PrintToChat($" {msg}");
+                return HookResult.Continue;
+            case 1:
+                player.PrintToCenter(msg);
+                return HookResult.Continue;
+            case 2:
+                player.PrintToCenterHtml(msg);
+                return HookResult.Continue;
+        }
+
+        return HookResult.Continue;
     }
 
     private void ShowAd(Advertisement ad)
@@ -72,18 +103,10 @@ public class Ads : BasePlugin
         return HookResult.Changed;
     }
 
+    [RequiresPermissions("@css/root")]
     [ConsoleCommand("css_advert_reload", "configuration restart")]
     public void ReloadAdvertConfig(CCSPlayerController? controller, CommandInfo command)
     {
-        if (controller != null)
-        {
-            if (!_config.Admins.Contains(controller.SteamID))
-            {
-                controller.PrintToChat("\x08[\x0C Advertisement \x08] you do not have access to this command");
-                return;
-            }
-        }
-
         _config = LoadConfig();
 
         foreach (var timer in _timers) timer.Kill();
@@ -110,7 +133,7 @@ public class Ads : BasePlugin
         }
         else
         {
-            if(_config.PrintToCenterHtml)
+            if (_config.PrintToCenterHtml)
                 foreach (var player in Utilities.GetPlayers())
                     player.PrintToCenterHtml($"{message}");
             else
@@ -169,11 +192,13 @@ public class Ads : BasePlugin
     {
         var config = new Config
         {
-            Admins = new List<ulong>
-            {
-                76561199096378663
-            },
             PrintToCenterHtml = false,
+            WelcomeMessage = new WelcomeMessage
+            {
+                //0 - CHAT | 1 - CENTER | 2 - CENTER HTML
+                MessageType = 0,
+                Message = "Welcome, {BLUE}{PLAYERNAME}"
+            },
             Ads = new List<Advertisement>
             {
                 new()
@@ -225,10 +250,16 @@ public class Ads : BasePlugin
 
 public class Config
 {
-    public required List<ulong> Admins { get; set; }
     public bool PrintToCenterHtml { get; set; }
+    public WelcomeMessage? WelcomeMessage { get; set; }
     public List<Advertisement> Ads { get; set; } = null!;
     public List<string> Panel { get; set; } = null!;
+}
+
+public class WelcomeMessage
+{
+    public int MessageType { get; init; }
+    public required string Message { get; init; }
 }
 
 public class Advertisement
