@@ -3,7 +3,7 @@ A plugin for cs2 that allows you to show ads in chat/center/panel
 
 # Installation
 1. Install [CounterStrike Sharp](https://github.com/roflmuffin/CounterStrikeSharp) and [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master)
-3. Download [Advertisement](https://github.com/partiusfabaa/cs2-advertisement/releases/tag/v1.0.4)
+3. Download [Advertisement](https://github.com/partiusfabaa/cs2-advertisement/releases/tag/v1.0.5)
 4. Unzip the archive and upload it to the game server
 
 # Config
