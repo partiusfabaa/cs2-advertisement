@@ -49,7 +49,8 @@ public class Ads : BasePlugin
         switch (welcomeMsg.MessageType)
         {
             case 0:
-                player.PrintToChat($" {msg}");
+                foreach (var s in WrappedLine(msg))
+                    player.PrintToChat($" {s}");
                 return HookResult.Continue;
             case 1:
                 player.PrintToCenter(msg);
@@ -98,7 +99,7 @@ public class Ads : BasePlugin
 
         handle.FunfactToken = ReplaceMessageTags(panel[_panelCount]);
         handle.TimerTime = 5;
-        _panelCount++;
+        _panelCount ++;
 
         return HookResult.Changed;
     }
@@ -127,8 +128,7 @@ public class Ads : BasePlugin
 
         if (destination != HudDestination.Center)
         {
-            var parts = message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-            foreach (var part in parts)
+            foreach (var part in WrappedLine(message))
                 Server.PrintToChatAll($" {part}");
         }
         else
@@ -139,6 +139,11 @@ public class Ads : BasePlugin
             else
                 VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
         }
+    }
+
+    private string[] WrappedLine(string message)
+    {
+        return message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     }
 
     private string ReplaceMessageTags(string message)
@@ -171,7 +176,7 @@ public class Ads : BasePlugin
             "\x0A"
         };
 
-        for (var i = 0; i < colorPatterns.Length; i++)
+        for (var i = 0; i < colorPatterns.Length; i ++)
             input = input.Replace(colorPatterns[i], colorReplacements[i]);
 
         return input;
@@ -269,5 +274,5 @@ public class Advertisement
 
     private int _currentMessageIndex;
 
-    [JsonIgnore] public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
+    [JsonIgnore] public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex ++ % Messages.Count];
 }
