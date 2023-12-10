@@ -24,7 +24,7 @@ The config is created automatically in the same place where the dll is located
           "Center": "Server name: {SERVERNAME}" 		// Advertising in the center
         },
         {
-          "Chat": "Chat Advertising 3",
+          "Chat": "map_name",
           "Center": "Center Advertising 2"
         }
       ]
@@ -33,8 +33,8 @@ The config is created automatically in the same place where the dll is located
       "Interval": 40,
       "Messages": [
         {
-          "Chat": "Chat Advertising 2"
-		//you can only write "Chat" or "Center".
+          "Chat": "current_time"
+	//you can only write "Chat" or "Center".
         },
         {
           "Chat": "{RED}Chat {BLUE}Advertising {GREEN}4"
@@ -47,6 +47,19 @@ The config is created automatically in the same place where the dll is located
 	"Panel Advertising 2",
 	"Panel Advertising 3"
   ],
+  "DefaultLang": "US", // Default language (it will be shown if there is no player's language in the config)
+  "LanguageMessages": {
+    "map_name": { 	//It is what you write that will define your message
+      "RU": "{GRAY}Текущая карта: {RED}{MAP}",
+      "US": "{GRAY}Current map: {RED}{MAP}",
+      "CN": "{GRAY}当前地图: {RED}{MAP}"
+    },
+    "current_time": {
+      "RU": "{GRAY}Текущее время: {RED}{TIME}",
+      "US": "{GRAY}Current time: {RED}{TIME}",
+      "CN": "{GRAY}当前时间: {RED}{TIME}"
+    }
+  },
   "MapsName": {
     "de_mirage": "Mirage",
     "de_dust2": "Dust II"
