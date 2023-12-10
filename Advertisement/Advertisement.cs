@@ -91,6 +91,8 @@ public class Ads : BasePlugin
 
     private HookResult EventCsWinPanelRound(EventCsWinPanelRound handle, GameEventInfo info)
     {
+        if (_config.Panel == null) return HookResult.Continue;
+
         var panel = _config.Panel;
 
         if (panel.Count == 0) return HookResult.Continue;
@@ -148,8 +150,10 @@ public class Ads : BasePlugin
 
     private string ReplaceMessageTags(string message)
     {
+        var mapName = NativeAPI.GetMapName();
+        
         var replacedMessage = message
-            .Replace("{MAP}", NativeAPI.GetMapName())
+            .Replace("{MAP}", mapName)
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
             .Replace("{DATE}", DateTime.Now.ToString("dd.MM.yyyy"))
             .Replace("{SERVERNAME}", ConVar.Find("hostname")!.StringValue)
@@ -159,6 +163,16 @@ public class Ads : BasePlugin
             .Replace("{PLAYERS}", Utilities.GetPlayers().Count.ToString());
 
         replacedMessage = ReplaceColorTags(replacedMessage);
+        
+        if (_config.MapsName != null)
+        {
+            foreach (var mapsName in _config.MapsName)
+            {
+                if (mapName != mapsName.Key) continue;
+
+                return replacedMessage.Replace(mapName, mapsName.Value);
+            }
+        }
 
         return replacedMessage;
     }
@@ -209,7 +223,7 @@ public class Ads : BasePlugin
                 new()
                 {
                     Interval = 35,
-                    Messages = new List<Dictionary<string, string>>()
+                    Messages = new List<Dictionary<string, string>>
                     {
                         new()
                         {
@@ -219,13 +233,13 @@ public class Ads : BasePlugin
                         new()
                         {
                             ["Chat"] = "Section 1 Chat 2"
-                        },
+                        }
                     }
                 },
                 new()
                 {
                     Interval = 40,
-                    Messages = new List<Dictionary<string, string>>()
+                    Messages = new List<Dictionary<string, string>>
                     {
                         new()
                         {
@@ -235,11 +249,16 @@ public class Ads : BasePlugin
                         {
                             ["Chat"] = "Section 2 Chat 2",
                             ["Center"] = "Section 2 Center 1"
-                        },
+                        }
                     }
                 }
             },
-            Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" }
+            Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" },
+            MapsName = new Dictionary<string, string>
+            {
+                ["de_mirage"] = "Mirage",
+                ["de_dust"] = "Dust II"
+            }
         };
 
         File.WriteAllText(configPath,
@@ -255,10 +274,11 @@ public class Ads : BasePlugin
 
 public class Config
 {
-    public bool PrintToCenterHtml { get; set; }
-    public WelcomeMessage? WelcomeMessage { get; set; }
-    public List<Advertisement> Ads { get; set; } = null!;
-    public List<string> Panel { get; set; } = null!;
+    public bool PrintToCenterHtml { get; init; }
+    public WelcomeMessage? WelcomeMessage { get; init; }
+    public List<Advertisement> Ads { get; init; } = null!;
+    public List<string>? Panel { get; init; }
+    public Dictionary<string, string>? MapsName { get; init; }
 }
 
 public class WelcomeMessage
