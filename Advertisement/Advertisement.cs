@@ -22,7 +22,7 @@ public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.5";
+    public override string ModuleVersion => "v1.0.6";
 
     private int _panelCount;
     private Config _config = null!;
