@@ -46,7 +46,11 @@ The config is created automatically in the same place where the dll is located
 	"<font color='#ff00ff'>Panel Advertising 1</font>",   // Advertising in the panel, only at the end of the round
 	"Panel Advertising 2",
 	"Panel Advertising 3"
-	]
+  ],
+  "MapsName": {
+    "de_mirage": "Mirage",
+    "de_dust2": "Dust II"
+  }
 }
 
 CHAT COLORS: {DEFAULT}, {RED}, {LIGHTPURPLE}, {GREEN}, {LIME}, {LIGHTGREEN}, {LIGHTRED}, {GRAY}, {LIGHTOLIVE}, {OLIVE}, {LIGHTBLUE}, {BLUE}, {PURPLE}, {GRAYBLUE}
