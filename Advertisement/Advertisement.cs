@@ -27,10 +27,20 @@ public class Ads : BasePlugin
     private int _panelCount;
     private Config _config = null!;
     private readonly List<Timer> _timers = new();
+    private readonly Dictionary<ulong, string> _playerIsoCode = new();
 
     public override void Load(bool hotReload)
     {
         _config = LoadConfig();
+        
+        RegisterListener<Listeners.OnClientAuthorized>((slot, id) =>
+        {
+            var player = Utilities.GetPlayerFromSlot(slot);
+
+            if (player.IpAddress != null)
+                _playerIsoCode.Add(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+        });
+        
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
 
@@ -133,8 +143,8 @@ public class Ads : BasePlugin
         foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null && u.IpAddress != "127.0.0.1"))
         {
             if (!_config.LanguageMessages.TryGetValue(message, out var language)) return;
-
-            var playerCountryIso = GetPlayerCountry(player.IpAddress?.Split(':')[0]!);
+            if (!_playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)) return;
+            
             var msg = string.Empty;
 
             if (!language.ContainsValue(playerCountryIso))
@@ -308,7 +318,7 @@ public class Ads : BasePlugin
         return config;
     }
 
-    private string GetPlayerCountry(string ip)
+    private string GetPlayerIsoCode(string ip)
     {
         try
         {
