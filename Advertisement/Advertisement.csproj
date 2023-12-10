@@ -12,4 +12,8 @@
       <HintPath>CounterStrikeSharp.API.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MaxMind.GeoIP2" Version="5.2.0" />
+  </ItemGroup>
 </Project>

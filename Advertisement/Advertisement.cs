@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CounterStrikeSharp.API;
@@ -12,6 +14,7 @@ using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
+using MaxMind.GeoIP2;
 
 namespace Advertisement;
 
@@ -126,20 +129,30 @@ public class Ads : BasePlugin
 
     private void PrintWrappedLine(HudDestination destination, string message)
     {
-        message = ReplaceMessageTags(message);
+        foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null && u.IpAddress != "127.0.0.1"))
+        {
+            if (!_config.LanguageMessages.TryGetValue(message, out var language)) return;
 
-        if (destination != HudDestination.Center)
-        {
-            foreach (var part in WrappedLine(message))
-                Server.PrintToChatAll($" {part}");
-        }
-        else
-        {
-            if (_config.PrintToCenterHtml)
-                foreach (var player in Utilities.GetPlayers())
-                    player.PrintToCenterHtml($"{message}");
+            var playerCountryIso = GetPlayerCountry(player.IpAddress?.Split(':')[0]!);
+            var msg = string.Empty;
+
+            if (!language.ContainsValue(playerCountryIso))
+                msg = language[_config.DefaultLang];
+
+            foreach (var lang in language.Where(lang => lang.Key == playerCountryIso))
+                msg = lang.Value;
+
+            msg = ReplaceMessageTags(msg);
+            if (destination != HudDestination.Center)
+                foreach (var part in WrappedLine(msg))
+                    player.PrintToChat($" {part}");
             else
-                VirtualFunctions.ClientPrintAll(destination, $" {message}", 0, 0, 0, 0);
+            {
+                if (_config.PrintToCenterHtml)
+                    player.PrintToCenterHtml(msg);
+                else
+                    player.PrintToCenter(msg);
+            }
         }
     }
 
@@ -147,11 +160,11 @@ public class Ads : BasePlugin
     {
         return message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     }
-
+    
     private string ReplaceMessageTags(string message)
     {
         var mapName = NativeAPI.GetMapName();
-        
+
         var replacedMessage = message
             .Replace("{MAP}", mapName)
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
@@ -163,7 +176,7 @@ public class Ads : BasePlugin
             .Replace("{PLAYERS}", Utilities.GetPlayers().Count.ToString());
 
         replacedMessage = ReplaceColorTags(replacedMessage);
-        
+
         if (_config.MapsName != null)
         {
             foreach (var mapsName in _config.MapsName)
@@ -227,12 +240,12 @@ public class Ads : BasePlugin
                     {
                         new()
                         {
-                            ["Chat"] = "Section 1 Chat 1",
+                            ["Chat"] = "map_name",
                             ["Center"] = "Section 1 Center 1"
                         },
                         new()
                         {
-                            ["Chat"] = "Section 1 Chat 2"
+                            ["Chat"] = "current_time"
                         }
                     }
                 },
@@ -254,6 +267,26 @@ public class Ads : BasePlugin
                 }
             },
             Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" },
+            DefaultLang = "US",
+            LanguageMessages = new Dictionary<string, Dictionary<string, string>>()
+            {
+                {
+                    "map_name", new Dictionary<string, string>
+                    {
+                        ["RU"] = "Текущая карта: {MAP}",
+                        ["US"] = "Current map: {MAP}",
+                        ["CN"] = "{GRAY}当前地图: {RED}{MAP}"
+                    }
+                },
+                {
+                    "current_time", new Dictionary<string, string>
+                    {
+                        ["RU"] = "{GRAY}Текущее время: {RED}{TIME}",
+                        ["US"] = "{GRAY}Current time: {RED}{TIME}",
+                        ["CN"] = "{GRAY}当前时间: {RED}{TIME}"
+                    }
+                }
+            },
             MapsName = new Dictionary<string, string>
             {
                 ["de_mirage"] = "Mirage",
@@ -270,6 +303,24 @@ public class Ads : BasePlugin
 
         return config;
     }
+
+    private string GetPlayerCountry(string ip)
+    {
+        try
+        {
+            using var reader = new DatabaseReader(Path.Combine(ModuleDirectory, "GeoLite2-Country.mmdb"));
+
+            var response = reader.Country(IPAddress.Parse(ip));
+
+            return response.Country.IsoCode ?? _config.DefaultLang;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex}");
+        }
+
+        return string.Empty;
+    }
 }
 
 public class Config
@@ -278,6 +329,9 @@ public class Config
     public WelcomeMessage? WelcomeMessage { get; init; }
     public List<Advertisement> Ads { get; init; } = null!;
     public List<string>? Panel { get; init; }
+
+    public required string DefaultLang { get; init; } = null!;
+    public Dictionary<string, Dictionary<string, string>> LanguageMessages { get; init; } = null!;
     public Dictionary<string, string>? MapsName { get; init; }
 }
 
