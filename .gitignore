@@ -51,3 +51,4 @@ Advertisement/.idea/.idea.Advertisement.dir/.idea/projectSettingsUpdater.xml
 Advertisement/bin/release/net7.0/publish/publish.zip
 Advertisement/obj/rider.project.model.nuget.info
 Advertisement/obj/rider.project.restore.info
+Advertisement/bin/release/net7.0/publish/addons/counterstrikesharp/plugins/Advertisement/GeoLite2-Country.mmdb

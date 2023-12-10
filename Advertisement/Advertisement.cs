@@ -52,14 +52,15 @@ public class Ads : BasePlugin
         switch (welcomeMsg.MessageType)
         {
             case 0:
-                foreach (var s in WrappedLine(msg))
-                    player.PrintToChat($" {s}");
+                // foreach (var s in WrappedLine(msg))
+                //     player.PrintToChat($" {s}");
+                PrintWrappedLine(HudDestination.Chat, msg, player.PlayerName);
                 return HookResult.Continue;
             case 1:
-                player.PrintToCenter(msg);
+                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName);
                 return HookResult.Continue;
             case 2:
-                player.PrintToCenterHtml(msg);
+                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName);
                 return HookResult.Continue;
         }
 
@@ -127,7 +128,7 @@ public class Ads : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination destination, string message)
+    private void PrintWrappedLine(HudDestination destination, string message, string? playerName = null)
     {
         foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null && u.IpAddress != "127.0.0.1"))
         {
@@ -143,6 +144,9 @@ public class Ads : BasePlugin
                 msg = lang.Value;
 
             msg = ReplaceMessageTags(msg);
+            
+            if(playerName != null) msg = msg.Replace("{PLAYERNAME}", playerName);
+            
             if (destination != HudDestination.Center)
                 foreach (var part in WrappedLine(msg))
                     player.PrintToChat($" {part}");
