@@ -32,7 +32,7 @@ public class Ads : BasePlugin
     public override void Load(bool hotReload)
     {
         _config = LoadConfig();
-        
+
         RegisterListener<Listeners.OnClientAuthorized>((slot, id) =>
         {
             var player = Utilities.GetPlayerFromSlot(slot);
@@ -40,7 +40,7 @@ public class Ads : BasePlugin
             if (player.IpAddress != null)
                 _playerIsoCode.Add(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
         });
-        
+
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
 
@@ -143,20 +143,22 @@ public class Ads : BasePlugin
         foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null && u.IpAddress != "127.0.0.1"))
         {
             if (!_config.LanguageMessages.TryGetValue(message, out var language)) return;
-            if (!_playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)) return;
-            
+            var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
+                ? playerCountryIso
+                : _config.DefaultLang;
+
             var msg = string.Empty;
 
-            if (!language.ContainsValue(playerCountryIso))
+            if (!language.ContainsValue(isoCode))
                 msg = language[_config.DefaultLang];
 
-            foreach (var lang in language.Where(lang => lang.Key == playerCountryIso))
+            foreach (var lang in language.Where(lang => lang.Key == isoCode))
                 msg = lang.Value;
 
             msg = ReplaceMessageTags(msg);
-            
-            if(playerName != null) msg = msg.Replace("{PLAYERNAME}", playerName);
-            
+
+            if (playerName != null) msg = msg.Replace("{PLAYERNAME}", playerName);
+
             if (destination != HudDestination.Center)
                 foreach (var part in WrappedLine(msg))
                     player.PrintToChat($" {part}");
@@ -174,7 +176,7 @@ public class Ads : BasePlugin
     {
         return message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     }
-    
+
     private string ReplaceMessageTags(string message)
     {
         var mapName = NativeAPI.GetMapName();
@@ -187,7 +189,8 @@ public class Ads : BasePlugin
             .Replace("{IP}", ConVar.Find("ip")!.StringValue)
             .Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString())
             .Replace("{MAXPLAYERS}", Server.MaxPlayers.ToString())
-            .Replace("{PLAYERS}", Utilities.GetPlayers().Count.ToString());
+            .Replace("{PLAYERS}",
+                Utilities.GetPlayers().Count(u => u.PlayerPawn.Value != null && u.PlayerPawn.Value.IsValid).ToString());
 
         replacedMessage = ReplaceColorTags(replacedMessage);
 
