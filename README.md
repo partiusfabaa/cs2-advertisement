@@ -24,7 +24,7 @@ The config is created automatically in the same place where the dll is located
           "Center": "Server name: {SERVERNAME}" 		// Advertising in the center
         },
         {
-          "Chat": "map_name",
+          "Chat": "{map_name}",
           "Center": "Center Advertising 2"
         }
       ]
@@ -33,7 +33,7 @@ The config is created automatically in the same place where the dll is located
       "Interval": 40,
       "Messages": [
         {
-          "Chat": "current_time"
+          "Chat": "{current_time}"
 	//you can only write "Chat" or "Center".
         },
         {
