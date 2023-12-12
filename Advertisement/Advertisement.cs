@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -43,6 +44,12 @@ public class Ads : BasePlugin
 
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
+        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        {
+            _playerIsoCode.Remove(@event.Userid.SteamID);
+
+            return HookResult.Continue;
+        });
 
         StartTimers();
     }
@@ -64,13 +71,10 @@ public class Ads : BasePlugin
             case 0:
                 // foreach (var s in WrappedLine(msg))
                 //     player.PrintToChat($" {s}");
-                PrintWrappedLine(HudDestination.Chat, msg, player.PlayerName);
+                PrintWrappedLine(HudDestination.Chat, msg, player.PlayerName, true);
                 return HookResult.Continue;
             case 1:
-                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName);
-                return HookResult.Continue;
-            case 2:
-                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName);
+                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName, true);
                 return HookResult.Continue;
         }
 
@@ -130,6 +134,13 @@ public class Ads : BasePlugin
         _timers.Clear();
         StartTimers();
 
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (player.IpAddress == null || player.AuthorizedSteamID == null) continue;
+            _playerIsoCode.TryAdd(player.AuthorizedSteamID.SteamId64,
+                GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+        }
+
         const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
 
         if (controller == null)
@@ -138,30 +149,49 @@ public class Ads : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination destination, string message, string? playerName = null)
+    private void PrintWrappedLine(HudDestination destination, string message, string? playerName = null,
+        bool isWelcome = false)
     {
-        foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null && u.IpAddress != "127.0.0.1"))
+        foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null))
         {
-            if (!_config.LanguageMessages.TryGetValue(message, out var language)) return;
-            var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
-                ? playerCountryIso
-                : _config.DefaultLang;
+            var matches = Regex.Matches(message, @"\{([^}]*)\}");
 
-            var msg = string.Empty;
+            var msg = message;
 
-            if (!language.ContainsValue(isoCode))
-                msg = language[_config.DefaultLang];
+            foreach (Match match in matches)
+            {
+                var tag = match.Groups[0].Value;
+                var tagName = match.Groups[1].Value;
 
-            foreach (var lang in language.Where(lang => lang.Key == isoCode))
-                msg = lang.Value;
+                if (!_config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
+                var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
+                    ? playerCountryIso
+                    : _config.DefaultLang;
+
+                if (language.TryGetValue(isoCode, out var tagReplacement))
+                    msg = msg.Replace(tag, tagReplacement);
+                else if (language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
+                    msg = msg.Replace(tag, defaultReplacement);
+            }
 
             msg = ReplaceMessageTags(msg);
 
             if (playerName != null) msg = msg.Replace("{PLAYERNAME}", playerName);
 
             if (destination != HudDestination.Center)
+            {
                 foreach (var part in WrappedLine(msg))
+                {
+                    if (isWelcome)
+                    {
+                        if (player.PlayerName == playerName)
+                            player.PrintToChat($" {part}");
+                        return;
+                    }
+
                     player.PrintToChat($" {part}");
+                }
+            }
             else
             {
                 if (_config.PrintToCenterHtml)
@@ -170,6 +200,18 @@ public class Ads : BasePlugin
                     player.PrintToCenter(msg);
             }
         }
+    }
+
+    private string RemoveTextInBraces(string input)
+    {
+        int start, end;
+        while ((start = input.IndexOf("{", StringComparison.Ordinal)) != -1 &&
+               (end = input.IndexOf("}", StringComparison.Ordinal)) != -1)
+        {
+            input = input.Remove(start, end - start + 1);
+        }
+
+        return input;
     }
 
     private string[] WrappedLine(string message)
@@ -323,6 +365,8 @@ public class Ads : BasePlugin
 
     private string GetPlayerIsoCode(string ip)
     {
+        if (ip == "127.0.0.1") return _config.DefaultLang;
+
         try
         {
             using var reader = new DatabaseReader(Path.Combine(ModuleDirectory, "GeoLite2-Country.mmdb"));
@@ -336,7 +380,7 @@ public class Ads : BasePlugin
             Console.WriteLine($"{ex}");
         }
 
-        return string.Empty;
+        return _config.DefaultLang;
     }
 }
 
