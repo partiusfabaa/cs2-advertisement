@@ -158,25 +158,29 @@ public class Ads : BasePlugin
 
             var msg = message;
 
-            foreach (Match match in matches)
+            if (_config.LanguageMessages != null)
             {
-                var tag = match.Groups[0].Value;
-                var tagName = match.Groups[1].Value;
+                foreach (Match match in matches)
+                {
+                    var tag = match.Groups[0].Value;
+                    var tagName = match.Groups[1].Value;
 
-                if (!_config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
-                var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
-                    ? playerCountryIso
-                    : _config.DefaultLang;
+                    if (!_config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
+                    var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
+                        ? playerCountryIso
+                        : _config.DefaultLang;
 
-                if (language.TryGetValue(isoCode, out var tagReplacement))
-                    msg = msg.Replace(tag, tagReplacement);
-                else if (language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
-                    msg = msg.Replace(tag, defaultReplacement);
+                    if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
+                        msg = msg.Replace(tag, tagReplacement);
+                    else if (_config.DefaultLang != null && language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
+                        msg = msg.Replace(tag, defaultReplacement);
+                }
             }
 
             msg = ReplaceMessageTags(msg);
 
-            if (playerName != null) msg = msg.Replace("{PLAYERNAME}", playerName);
+            if (playerName != null)
+                msg = msg.Replace("{PLAYERNAME}", playerName);
 
             if (destination != HudDestination.Center)
             {
@@ -186,10 +190,9 @@ public class Ads : BasePlugin
                     {
                         if (player.PlayerName == playerName)
                             player.PrintToChat($" {part}");
-                        return;
                     }
-
-                    player.PrintToChat($" {part}");
+                    else
+                        player.PrintToChat($" {part}");
                 }
             }
             else
@@ -299,12 +302,12 @@ public class Ads : BasePlugin
                     {
                         new()
                         {
-                            ["Chat"] = "map_name",
+                            ["Chat"] = "{map_name}",
                             ["Center"] = "Section 1 Center 1"
                         },
                         new()
                         {
-                            ["Chat"] = "current_time"
+                            ["Chat"] = "{current_time}"
                         }
                     }
                 },
@@ -365,7 +368,11 @@ public class Ads : BasePlugin
 
     private string GetPlayerIsoCode(string ip)
     {
-        if (ip == "127.0.0.1") return _config.DefaultLang;
+        var defaultLang = string.Empty;
+        if (_config.DefaultLang != null)
+            defaultLang = _config.DefaultLang;
+
+        if (ip == "127.0.0.1") return defaultLang;
 
         try
         {
@@ -373,14 +380,14 @@ public class Ads : BasePlugin
 
             var response = reader.Country(IPAddress.Parse(ip));
 
-            return response.Country.IsoCode ?? _config.DefaultLang;
+            return response.Country.IsoCode ?? defaultLang;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"{ex}");
         }
 
-        return _config.DefaultLang;
+        return defaultLang;
     }
 }
 
@@ -391,8 +398,8 @@ public class Config
     public List<Advertisement> Ads { get; init; } = null!;
     public List<string>? Panel { get; init; }
 
-    public required string DefaultLang { get; init; } = null!;
-    public Dictionary<string, Dictionary<string, string>> LanguageMessages { get; init; } = null!;
+    public string? DefaultLang { get; init; }
+    public Dictionary<string, Dictionary<string, string>>? LanguageMessages { get; init; }
     public Dictionary<string, string>? MapsName { get; init; }
 }
 
