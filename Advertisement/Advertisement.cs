@@ -12,7 +12,6 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Cvars;
-using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using MaxMind.GeoIP2;
@@ -44,7 +43,7 @@ public class Ads : BasePlugin
 
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
-        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
             _playerIsoCode.Remove(@event.Userid.SteamID);
 
@@ -197,24 +196,12 @@ public class Ads : BasePlugin
             }
             else
             {
-                if (_config.PrintToCenterHtml)
+                if (_config.PrintToCenterHtml != null && _config.PrintToCenterHtml.Value)
                     player.PrintToCenterHtml(msg);
                 else
                     player.PrintToCenter(msg);
             }
         }
-    }
-
-    private string RemoveTextInBraces(string input)
-    {
-        int start, end;
-        while ((start = input.IndexOf("{", StringComparison.Ordinal)) != -1 &&
-               (end = input.IndexOf("}", StringComparison.Ordinal)) != -1)
-        {
-            input = input.Remove(start, end - start + 1);
-        }
-
-        return input;
     }
 
     private string[] WrappedLine(string message)
@@ -393,7 +380,7 @@ public class Ads : BasePlugin
 
 public class Config
 {
-    public bool PrintToCenterHtml { get; init; }
+    public bool? PrintToCenterHtml { get; init; }
     public WelcomeMessage? WelcomeMessage { get; init; }
     public List<Advertisement> Ads { get; init; } = null!;
     public List<string>? Panel { get; init; }
