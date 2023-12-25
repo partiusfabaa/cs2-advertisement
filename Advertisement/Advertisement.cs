@@ -38,7 +38,7 @@ public class Ads : BasePlugin
             var player = Utilities.GetPlayerFromSlot(slot);
 
             if (player.IpAddress != null)
-                _playerIsoCode.Add(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+                _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
         });
 
         RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
