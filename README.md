@@ -1,6 +1,12 @@
 # cs2-advertisement
 A plugin for cs2 that allows you to show ads in chat/center/panel
 
+<br>
+<p align="center">
+<a href="https://www.buymeacoffee.com/thesamefabius"><img src="https://img.buymeacoffee.com/button-api/?text=Support my work&emoji=🐱&slug=thesamefabius&button_colour=febee6&font_colour=000000&font_family=Inter&outline_colour=000000&coffee_colour=FFDD00" /></a>
+</p>
+
+
 # Installation
 1. Install [CounterStrike Sharp](https://github.com/roflmuffin/CounterStrikeSharp) and [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master)
 3. Download [Advertisement](https://github.com/partiusfabaa/cs2-advertisement/releases/tag/v1.0.5)
