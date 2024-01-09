@@ -37,6 +37,8 @@ public class Ads : BasePlugin
         {
             var player = Utilities.GetPlayerFromSlot(slot);
 
+            if (_config.LanguageMessages == null) return;
+
             if (player.IpAddress != null)
                 _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
         });
@@ -45,6 +47,7 @@ public class Ads : BasePlugin
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
+            if (_config.LanguageMessages == null) return HookResult.Continue;
             _playerIsoCode.Remove(@event.Userid.SteamID);
 
             return HookResult.Continue;
@@ -171,7 +174,8 @@ public class Ads : BasePlugin
 
                     if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
                         msg = msg.Replace(tag, tagReplacement);
-                    else if (_config.DefaultLang != null && language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
+                    else if (_config.DefaultLang != null &&
+                             language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
                         msg = msg.Replace(tag, defaultReplacement);
                 }
             }
@@ -180,8 +184,8 @@ public class Ads : BasePlugin
 
             if (playerName != null)
                 msg = msg.Replace("{PLAYERNAME}", playerName);
-
-            if (destination != HudDestination.Center)
+            
+            if (destination == HudDestination.Chat)
             {
                 foreach (var part in WrappedLine(msg))
                 {
@@ -197,9 +201,12 @@ public class Ads : BasePlugin
             else
             {
                 if (_config.PrintToCenterHtml != null && _config.PrintToCenterHtml.Value)
+                {
                     player.PrintToCenterHtml(msg);
-                else
-                    player.PrintToCenter(msg);
+                    return;
+                }
+                
+                player.PrintToCenter(msg);
             }
         }
     }
