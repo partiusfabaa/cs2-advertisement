@@ -73,10 +73,10 @@ public class Ads : BasePlugin
             case 0:
                 // foreach (var s in WrappedLine(msg))
                 //     player.PrintToChat($" {s}");
-                PrintWrappedLine(HudDestination.Chat, msg, player.PlayerName, true);
+                PrintWrappedLine(HudDestination.Chat, msg, player, true);
                 return HookResult.Continue;
             case 1:
-                PrintWrappedLine(HudDestination.Center, msg, player.PlayerName, true);
+                PrintWrappedLine(HudDestination.Center, msg, player, true);
                 return HookResult.Continue;
         }
 
@@ -92,10 +92,10 @@ public class Ads : BasePlugin
             switch (type)
             {
                 case "Chat":
-                    PrintWrappedLine(HudDestination.Chat, message);
+                    PrintWrappedLine(destination: HudDestination.Chat, message: message);
                     break;
                 case "Center":
-                    PrintWrappedLine(HudDestination.Center, message);
+                    PrintWrappedLine(destination: HudDestination.Center, message: message);
                     break;
             }
         }
@@ -136,11 +136,15 @@ public class Ads : BasePlugin
         _timers.Clear();
         StartTimers();
 
-        foreach (var player in Utilities.GetPlayers())
+        if (_config.LanguageMessages != null)
         {
-            if (player.IpAddress == null || player.AuthorizedSteamID == null) continue;
-            _playerIsoCode.TryAdd(player.AuthorizedSteamID.SteamId64,
-                GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player.IpAddress == null || player.AuthorizedSteamID == null) continue;
+
+                _playerIsoCode.TryAdd(player.AuthorizedSteamID.SteamId64,
+                    GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+            }
         }
 
         const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
@@ -151,65 +155,71 @@ public class Ads : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination destination, string message, string? playerName = null,
-        bool isWelcome = false)
+    private void PrintWrappedLine(HudDestination? destination, string message,
+        CCSPlayerController? connectPlayer = null, bool isWelcome = false)
     {
-        foreach (var player in Utilities.GetPlayers().Where(u => u.IpAddress != null))
+        if (connectPlayer != null && isWelcome)
         {
-            var matches = Regex.Matches(message, @"\{([^}]*)\}");
-
-            var msg = message;
-
-            if (_config.LanguageMessages != null)
-            {
-                foreach (Match match in matches)
-                {
-                    var tag = match.Groups[0].Value;
-                    var tagName = match.Groups[1].Value;
-
-                    if (!_config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
-                    var isoCode = _playerIsoCode.TryGetValue(player.SteamID, out var playerCountryIso)
-                        ? playerCountryIso
-                        : _config.DefaultLang;
-
-                    if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
-                        msg = msg.Replace(tag, tagReplacement);
-                    else if (_config.DefaultLang != null &&
-                             language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
-                        msg = msg.Replace(tag, defaultReplacement);
-                }
-            }
-
-            msg = ReplaceMessageTags(msg);
-
-            if (playerName != null)
-                msg = msg.Replace("{PLAYERNAME}", playerName);
+            var processedMessage = ProcessMessage(message, connectPlayer.SteamID)
+                .Replace("{PLAYERNAME}", connectPlayer.PlayerName);
             
-            if (destination == HudDestination.Chat)
+            foreach (var part in WrappedLine(processedMessage))
             {
-                foreach (var part in WrappedLine(msg))
-                {
-                    if (isWelcome)
-                    {
-                        if (player.PlayerName == playerName)
-                            player.PrintToChat($" {part}");
-                    }
-                    else
-                        player.PrintToChat($" {part}");
-                }
+                connectPlayer.PrintToChat($" {part}");
             }
-            else
+        }
+        else
+        {
+            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome))
             {
-                if (_config.PrintToCenterHtml != null && _config.PrintToCenterHtml.Value)
+                var processedMessage = ProcessMessage(message, player.SteamID);
+
+                if (destination == HudDestination.Chat)
                 {
-                    player.PrintToCenterHtml(msg);
-                    return;
+                    foreach (var part in WrappedLine(processedMessage))
+                    {
+                        player.PrintToChat($" {part}");
+                    }
                 }
-                
-                player.PrintToCenter(msg);
+                else
+                {
+                    if (_config.PrintToCenterHtml != null && _config.PrintToCenterHtml.Value)
+                        player.PrintToCenterHtml(processedMessage);
+                    else
+                        player.PrintToCenter(processedMessage);
+                }
             }
         }
     }
+
+
+    private string ProcessMessage(string message, ulong steamId)
+    {
+        if (_config.LanguageMessages == null) return ReplaceMessageTags(message);
+
+        var matches = Regex.Matches(message, @"\{([^}]*)\}");
+
+        foreach (Match match in matches)
+        {
+            var tag = match.Groups[0].Value;
+            var tagName = match.Groups[1].Value;
+
+            if (!_config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
+            
+            var isoCode = _playerIsoCode.TryGetValue(steamId, out var playerCountryIso)
+                ? playerCountryIso
+                : _config.DefaultLang;
+
+            if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
+                message = message.Replace(tag, tagReplacement);
+            else if (_config.DefaultLang != null &&
+                     language.TryGetValue(_config.DefaultLang, out var defaultReplacement))
+                message = message.Replace(tag, defaultReplacement);
+        }
+
+        return ReplaceMessageTags(message);
+    }
+
 
     private string[] WrappedLine(string message)
     {
