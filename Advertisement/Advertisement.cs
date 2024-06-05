@@ -23,11 +23,8 @@ public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.6.8";
+    public override string ModuleVersion => "v1.0.6.9";
 
-    private int _panelCount;
-
-    //private Config _config = null!;
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
     public Config Config { get; set; }
@@ -37,7 +34,6 @@ public class Ads : BasePlugin
         Config = LoadConfig();
         Console.WriteLine(Config.Panel == null);
 
-        //RegisterEventHandler<EventCsWinPanelRound>(EventCsWinPanelRound, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
@@ -62,23 +58,7 @@ public class Ads : BasePlugin
 
         StartTimers();
     }
-
-    // private HookResult EventCsWinPanelRound(EventCsWinPanelRound handle, GameEventInfo info)
-    // {
-    //     if (Config.Panel == null) return HookResult.Continue;
-    //
-    //     var panel = Config.Panel;
-    //     if (panel.Count == 0) return HookResult.Continue;
-    //
-    //     if (_panelCount >= panel.Count) _panelCount = 0;
-    //
-    //     handle.FunfactToken = ReplaceMessageTags(panel[_panelCount]);
-    //     handle.TimerTime = 5;
-    //     _panelCount++;
-    //     
-    //     return HookResult.Changed;
-    // }
-
+    
     private HookResult EventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
     {
         if (Config.WelcomeMessage == null) return HookResult.Continue;
@@ -152,7 +132,7 @@ public class Ads : BasePlugin
     private void PrintWrappedLine(HudDestination? destination, string message,
         CCSPlayerController? connectPlayer = null, bool isWelcome = false)
     {
-        if (connectPlayer != null && isWelcome)
+        if (connectPlayer != null && !connectPlayer.IsBot && isWelcome)
         {
             AddTimer(Config.WelcomeMessage?.DisplayDelay ?? 2, () =>
             {
@@ -164,7 +144,7 @@ public class Ads : BasePlugin
         }
         else
         {
-            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome))
+            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome && !u.IsBot))
             {
                 var processedMessage = ProcessMessage(message, player.SteamID);
 
