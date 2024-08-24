@@ -23,7 +23,7 @@ public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.6.9";
+    public override string ModuleVersion => "v1.0.7";
 
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
@@ -64,7 +64,7 @@ public class Ads : BasePlugin
         if (Config.WelcomeMessage == null) return HookResult.Continue;
 
         var player = @event.Userid;
-        if (player is null || !player.IsValid) return HookResult.Continue;
+        if (player is null || !player.IsValid || player.SteamID == null) return HookResult.Continue;
 
         var welcomeMsg = Config.WelcomeMessage;
         var msg = welcomeMsg.Message.Replace("{PLAYERNAME}", player.PlayerName).ReplaceColorTags();
@@ -136,6 +136,8 @@ public class Ads : BasePlugin
         {
             AddTimer(Config.WelcomeMessage?.DisplayDelay ?? 2, () =>
             {
+                 if (connectPlayer == null || !connectPlayer.IsValid || connectPlayer.SteamID == null) return;
+
                 var processedMessage = ProcessMessage(message, connectPlayer.SteamID)
                     .Replace("{PLAYERNAME}", connectPlayer.PlayerName);
 
@@ -144,7 +146,7 @@ public class Ads : BasePlugin
         }
         else
         {
-            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome && !u.IsBot))
+            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome && !u.IsBot && u.IsValid && u.SteamID != null))
             {
                 var processedMessage = ProcessMessage(message, player.SteamID);
 
