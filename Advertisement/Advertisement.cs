@@ -35,10 +35,10 @@ public class Ads : BasePlugin
 
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
-    
+
     public Config Config { get; set; }
 
-    private readonly User[] _users = new User[66];
+    private readonly User?[] _users = new User?[66];
 
     public override void Load(bool hotReload)
     {
@@ -98,14 +98,17 @@ public class Ads : BasePlugin
 
         return HookResult.Continue;
     }
-    
+
     private void OnTick()
     {
         foreach (var player in Utilities.GetPlayers())
         {
             var user = _users[player.Slot];
             var showWhenDead = Config.ShowHtmlWhenDead;
-            if (user.HtmlPrint && showWhenDead is null || showWhenDead == false || (showWhenDead == true && !player.PawnIsAlive))
+            if (user is not null && 
+                user.HtmlPrint && 
+                (showWhenDead is null || showWhenDead == false ||
+                 (showWhenDead == true && !player.PawnIsAlive)))
             {
                 var duration = Config.HtmlCenterDuration;
                 if (duration != null && TimeSpan.FromSeconds(user.PrintTime / 64.0).Seconds < duration.Value)
@@ -176,7 +179,8 @@ public class Ads : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination? destination, string message, CCSPlayerController? connectPlayer = null, bool isWelcome = false)
+    private void PrintWrappedLine(HudDestination? destination, string message,
+        CCSPlayerController? connectPlayer = null, bool isWelcome = false)
     {
         if (connectPlayer != null && !connectPlayer.IsBot && isWelcome)
         {
@@ -217,7 +221,7 @@ public class Ads : BasePlugin
                 }
                 else
                 {
-                    if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value) 
+                    if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value)
                         SetHtmlPrintSettings(player, processedMessage);
                     else
                         player.PrintToCenter(processedMessage);
@@ -229,6 +233,12 @@ public class Ads : BasePlugin
     private void SetHtmlPrintSettings(CCSPlayerController player, string message)
     {
         var user = _users[player.Slot];
+        if (user is null)
+        {
+            _users[player.Slot] = new User();
+            return;
+        }
+        
         user.HtmlPrint = true;
         user.PrintTime = 0;
         user.Message = message;
