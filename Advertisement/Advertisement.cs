@@ -13,21 +13,32 @@ using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Cvars;
+using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using MaxMind.GeoIP2;
 
 namespace Advertisement;
 
+public class User
+{
+    public bool HtmlPrint { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int PrintTime { get; set; }
+}
+
 public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.7";
+    public override string ModuleVersion => "v1.0.8";
 
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
+    
     public Config Config { get; set; }
+
+    private readonly User[] _users = new User[66];
 
     public override void Load(bool hotReload)
     {
@@ -35,30 +46,44 @@ public class Ads : BasePlugin
         Console.WriteLine(Config.Panel == null);
 
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
-        RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
-        {
-            if (Config.LanguageMessages == null) return HookResult.Continue;
-            var player = @event.Userid;
-            if (player is null) return HookResult.Continue;
-            
-            _playerIsoCode.Remove(player.SteamID);
+        RegisterEventHandler<EventPlayerDisconnect>(EventPlayerDisconnect);
 
-            return HookResult.Continue;
-        });
-
-        RegisterListener<Listeners.OnClientAuthorized>((slot, id) =>
-        {
-            var player = Utilities.GetPlayerFromSlot(slot);
-
-            if (Config.LanguageMessages == null) return;
-
-            if (player is not null && player.IpAddress != null)
-                _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
-        });
+        RegisterListener<Listeners.OnClientAuthorized>(OnClientAuthorized);
+        RegisterListener<Listeners.OnTick>(OnTick);
 
         StartTimers();
+
+        if (hotReload)
+        {
+            foreach (var player in Utilities.GetPlayers())
+            {
+                _users[player.Slot] = new User();
+            }
+        }
     }
-    
+
+    private HookResult EventPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
+    {
+        if (Config.LanguageMessages == null) return HookResult.Continue;
+        var player = @event.Userid;
+        if (player is null) return HookResult.Continue;
+
+        _playerIsoCode.Remove(player.SteamID);
+
+        return HookResult.Continue;
+    }
+
+    private void OnClientAuthorized(int slot, SteamID id)
+    {
+        var player = Utilities.GetPlayerFromSlot(slot);
+        _users[slot] = new User();
+
+        if (Config.LanguageMessages == null) return;
+
+        if (player is not null && player.IpAddress != null)
+            _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
+    }
+
     private HookResult EventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
     {
         if (Config.WelcomeMessage == null) return HookResult.Continue;
@@ -69,9 +94,31 @@ public class Ads : BasePlugin
         var welcomeMsg = Config.WelcomeMessage;
         var msg = welcomeMsg.Message.Replace("{PLAYERNAME}", player.PlayerName).ReplaceColorTags();
 
-        PrintWrappedLine(welcomeMsg.MessageType == 0 ? HudDestination.Chat : HudDestination.Center, msg, player, true);
+        PrintWrappedLine(0, msg, player, true);
 
         return HookResult.Continue;
+    }
+    
+    private void OnTick()
+    {
+        foreach (var player in Utilities.GetPlayers())
+        {
+            var user = _users[player.Slot];
+            var showWhenDead = Config.ShowHtmlWhenDead;
+            if (user.HtmlPrint && showWhenDead is null || showWhenDead == false || (showWhenDead == true && !player.PawnIsAlive))
+            {
+                var duration = Config.HtmlCenterDuration;
+                if (duration != null && TimeSpan.FromSeconds(user.PrintTime / 64.0).Seconds < duration.Value)
+                {
+                    player.PrintToCenterHtml(user.Message);
+                    user.PrintTime++;
+                }
+                else
+                {
+                    user.HtmlPrint = false;
+                }
+            }
+        }
     }
 
     private void ShowAd(Advertisement ad)
@@ -129,24 +176,38 @@ public class Ads : BasePlugin
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination? destination, string message,
-        CCSPlayerController? connectPlayer = null, bool isWelcome = false)
+    private void PrintWrappedLine(HudDestination? destination, string message, CCSPlayerController? connectPlayer = null, bool isWelcome = false)
     {
         if (connectPlayer != null && !connectPlayer.IsBot && isWelcome)
         {
-            AddTimer(Config.WelcomeMessage?.DisplayDelay ?? 2, () =>
+            var welcomeMessage = Config.WelcomeMessage;
+            if (welcomeMessage is null) return;
+
+            AddTimer(welcomeMessage.DisplayDelay, () =>
             {
-                 if (connectPlayer == null || !connectPlayer.IsValid || connectPlayer.SteamID == null) return;
+                if (connectPlayer == null || !connectPlayer.IsValid || connectPlayer.SteamID == null) return;
 
                 var processedMessage = ProcessMessage(message, connectPlayer.SteamID)
                     .Replace("{PLAYERNAME}", connectPlayer.PlayerName);
 
-                connectPlayer.PrintToChat(processedMessage);
+                switch (welcomeMessage.MessageType)
+                {
+                    case MessageType.Chat:
+                        connectPlayer.PrintToChat(processedMessage);
+                        break;
+                    case MessageType.Center:
+                        connectPlayer.PrintToChat(processedMessage);
+                        break;
+                    case MessageType.CenterHtml:
+                        SetHtmlPrintSettings(connectPlayer, processedMessage);
+                        break;
+                }
             });
         }
         else
         {
-            foreach (var player in Utilities.GetPlayers().Where(u => !isWelcome && !u.IsBot && u.IsValid && u.SteamID != null))
+            foreach (var player in Utilities.GetPlayers()
+                         .Where(u => !isWelcome && !u.IsBot && u.IsValid && u.SteamID != null))
             {
                 var processedMessage = ProcessMessage(message, player.SteamID);
 
@@ -156,13 +217,21 @@ public class Ads : BasePlugin
                 }
                 else
                 {
-                    if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value)
-                        player.PrintToCenterHtml(processedMessage);
+                    if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value) 
+                        SetHtmlPrintSettings(player, processedMessage);
                     else
                         player.PrintToCenter(processedMessage);
                 }
             }
         }
+    }
+
+    private void SetHtmlPrintSettings(CCSPlayerController player, string message)
+    {
+        var user = _users[player.Slot];
+        user.HtmlPrint = true;
+        user.PrintTime = 0;
+        user.Message = message;
     }
 
     private string ProcessMessage(string message, ulong steamId)
@@ -204,7 +273,8 @@ public class Ads : BasePlugin
             .Replace("{IP}", ConVar.Find("ip")!.StringValue)
             .Replace("{PORT}", ConVar.Find("hostport")!.GetPrimitiveValue<int>().ToString())
             .Replace("{MAXPLAYERS}", Server.MaxPlayers.ToString())
-            .Replace("{PLAYERS}", Utilities.GetPlayers().Count(u => u.PlayerPawn.Value != null && u.PlayerPawn.Value.IsValid).ToString())
+            .Replace("{PLAYERS}",
+                Utilities.GetPlayers().Count(u => u.PlayerPawn.Value != null && u.PlayerPawn.Value.IsValid).ToString())
             .Replace("\n", "\u2029");
 
         replacedMessage = replacedMessage.ReplaceColorTags();
@@ -348,6 +418,8 @@ public class Ads : BasePlugin
 public class Config
 {
     public bool? PrintToCenterHtml { get; init; }
+    public float? HtmlCenterDuration { get; init; }
+    public bool? ShowHtmlWhenDead { get; set; }
     public WelcomeMessage? WelcomeMessage { get; init; }
     public List<Advertisement> Ads { get; init; }
     public List<string>? Panel { get; init; }
@@ -356,11 +428,18 @@ public class Config
     public Dictionary<string, string>? MapsName { get; init; }
 }
 
+public enum MessageType
+{
+    Chat = 0,
+    Center,
+    CenterHtml
+}
+
 public class WelcomeMessage
 {
-    public int MessageType { get; init; }
+    public MessageType MessageType { get; init; }
     public required string Message { get; init; }
-    public float DisplayDelay { get; set; }
+    public float DisplayDelay { get; set; } = 2;
 }
 
 public class Advertisement
