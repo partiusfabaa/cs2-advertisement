@@ -31,7 +31,7 @@ public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.8";
+    public override string ModuleVersion => "v1.0.8-recompile";
 
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
@@ -105,8 +105,8 @@ public class Ads : BasePlugin
         {
             var user = _users[player.Slot];
             var showWhenDead = Config.ShowHtmlWhenDead;
-            if (user is not null && 
-                user.HtmlPrint && 
+            if (user is not null &&
+                user.HtmlPrint &&
                 (showWhenDead is null || showWhenDead == false ||
                  (showWhenDead == true && !player.PawnIsAlive)))
             {
@@ -238,7 +238,7 @@ public class Ads : BasePlugin
             _users[player.Slot] = new User();
             return;
         }
-        
+
         user.HtmlPrint = true;
         user.PrintTime = 0;
         user.Message = message;
