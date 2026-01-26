@@ -31,28 +31,22 @@ public class Ads : BasePlugin
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.8-recompile";
+    public override string ModuleVersion => "v1.0.9";
 
     private readonly List<Timer> _timers = new();
     private readonly Dictionary<ulong, string> _playerIsoCode = new();
-
-    public Config Config { get; set; }
-
+    public Config Config { get; set; } = null!;
     private readonly User?[] _users = new User?[66];
 
     public override void Load(bool hotReload)
     {
         Config = LoadConfig();
         Console.WriteLine(Config.Panel == null);
-
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
         RegisterEventHandler<EventPlayerDisconnect>(EventPlayerDisconnect);
-
         RegisterListener<Listeners.OnClientAuthorized>(OnClientAuthorized);
         RegisterListener<Listeners.OnTick>(OnTick);
-
         StartTimers();
-
         if (hotReload)
         {
             foreach (var player in Utilities.GetPlayers())
@@ -67,9 +61,7 @@ public class Ads : BasePlugin
         if (Config.LanguageMessages == null) return HookResult.Continue;
         var player = @event.Userid;
         if (player is null) return HookResult.Continue;
-
         _playerIsoCode.Remove(player.SteamID);
-
         return HookResult.Continue;
     }
 
@@ -77,9 +69,7 @@ public class Ads : BasePlugin
     {
         var player = Utilities.GetPlayerFromSlot(slot);
         _users[slot] = new User();
-
         if (Config.LanguageMessages == null) return;
-
         if (player is not null && player.IpAddress != null)
             _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
     }
@@ -87,15 +77,11 @@ public class Ads : BasePlugin
     private HookResult EventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
     {
         if (Config.WelcomeMessage == null) return HookResult.Continue;
-
         var player = @event.Userid;
-        if (player is null || !player.IsValid || player.SteamID == null) return HookResult.Continue;
-
+        if (player is null || !player.IsValid) return HookResult.Continue;
         var welcomeMsg = Config.WelcomeMessage;
         var msg = welcomeMsg.Message.Replace("{PLAYERNAME}", player.PlayerName).ReplaceColorTags();
-
-        PrintWrappedLine(0, msg, player, true);
-
+        PrintWrappedLine(null, msg, player, true);
         return HookResult.Continue;
     }
 
@@ -127,16 +113,15 @@ public class Ads : BasePlugin
     private void ShowAd(Advertisement ad)
     {
         var messages = ad.NextMessages;
-
         foreach (var (type, message) in messages)
         {
             switch (type)
             {
                 case "Chat":
-                    PrintWrappedLine(destination: HudDestination.Chat, message: message);
+                    PrintWrappedLine(HudDestination.Chat, message);
                     break;
                 case "Center":
-                    PrintWrappedLine(destination: HudDestination.Center, message: message);
+                    PrintWrappedLine(HudDestination.Center, message);
                     break;
             }
         }
@@ -155,24 +140,19 @@ public class Ads : BasePlugin
     public void ReloadAdvertConfig(CCSPlayerController? controller, CommandInfo command)
     {
         Config = LoadConfig();
-
         foreach (var timer in _timers) timer.Kill();
         _timers.Clear();
         StartTimers();
-
         if (Config.LanguageMessages != null)
         {
             foreach (var player in Utilities.GetPlayers())
             {
                 if (player.IpAddress == null || player.AuthorizedSteamID == null) continue;
-
                 _playerIsoCode.TryAdd(player.AuthorizedSteamID.SteamId64,
                     GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
             }
         }
-
         const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
-
         if (controller == null)
             Console.WriteLine(msg);
         else
@@ -186,21 +166,18 @@ public class Ads : BasePlugin
         {
             var welcomeMessage = Config.WelcomeMessage;
             if (welcomeMessage is null) return;
-
             AddTimer(welcomeMessage.DisplayDelay, () =>
             {
-                if (connectPlayer == null || !connectPlayer.IsValid || connectPlayer.SteamID == null) return;
-
+                if (connectPlayer == null || !connectPlayer.IsValid) return;
                 var processedMessage = ProcessMessage(message, connectPlayer.SteamID)
                     .Replace("{PLAYERNAME}", connectPlayer.PlayerName);
-
                 switch (welcomeMessage.MessageType)
                 {
                     case MessageType.Chat:
                         connectPlayer.PrintToChat(processedMessage);
                         break;
                     case MessageType.Center:
-                        connectPlayer.PrintToChat(processedMessage);
+                        connectPlayer.PrintToCenter(processedMessage);
                         break;
                     case MessageType.CenterHtml:
                         SetHtmlPrintSettings(connectPlayer, processedMessage);
@@ -211,10 +188,9 @@ public class Ads : BasePlugin
         else
         {
             foreach (var player in Utilities.GetPlayers()
-                         .Where(u => !isWelcome && !u.IsBot && u.IsValid && u.SteamID != null))
+                         .Where(u => !isWelcome && !u.IsBot && u.IsValid))
             {
                 var processedMessage = ProcessMessage(message, player.SteamID);
-
                 if (destination == HudDestination.Chat)
                 {
                     player.PrintToChat($" {processedMessage}");
@@ -238,7 +214,6 @@ public class Ads : BasePlugin
             _users[player.Slot] = new User();
             return;
         }
-
         user.HtmlPrint = true;
         user.PrintTime = 0;
         user.Message = message;
@@ -247,34 +222,27 @@ public class Ads : BasePlugin
     private string ProcessMessage(string message, ulong steamId)
     {
         if (Config.LanguageMessages == null) return ReplaceMessageTags(message);
-
         var matches = Regex.Matches(message, @"\{([^}]*)\}");
-
         foreach (Match match in matches)
         {
             var tag = match.Groups[0].Value;
             var tagName = match.Groups[1].Value;
-
             if (!Config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
-
             var isoCode = _playerIsoCode.TryGetValue(steamId, out var playerCountryIso)
                 ? playerCountryIso
                 : Config.DefaultLang;
-
             if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
                 message = message.Replace(tag, tagReplacement);
             else if (Config.DefaultLang != null &&
                      language.TryGetValue(Config.DefaultLang, out var defaultReplacement))
                 message = message.Replace(tag, defaultReplacement);
         }
-
         return ReplaceMessageTags(message);
     }
 
     private string ReplaceMessageTags(string message)
     {
         var mapName = NativeAPI.GetMapName();
-
         var replacedMessage = message
             .Replace("{MAP}", mapName)
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
@@ -286,9 +254,7 @@ public class Ads : BasePlugin
             .Replace("{PLAYERS}",
                 Utilities.GetPlayers().Count(u => u.PlayerPawn.Value != null && u.PlayerPawn.Value.IsValid).ToString())
             .Replace("\n", "\u2029");
-
         replacedMessage = replacedMessage.ReplaceColorTags();
-
         if (Config.MapsName != null)
         {
             foreach (var mapsName in Config.MapsName.Where(mapsName => mapName == mapsName.Key))
@@ -296,7 +262,6 @@ public class Ads : BasePlugin
                 return replacedMessage.Replace(mapName, mapsName.Value);
             }
         }
-
         return replacedMessage;
     }
 
@@ -304,14 +269,10 @@ public class Ads : BasePlugin
     {
         var directory = Path.Combine(Application.RootDirectory, "configs/plugins/Advertisement");
         Directory.CreateDirectory(directory);
-
         var configPath = Path.Combine(directory, "Advertisement.json");
-
         if (!File.Exists(configPath)) return CreateConfig(configPath);
-
         var config = JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath),
             new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip })!;
-
         return config;
     }
 
@@ -389,14 +350,11 @@ public class Ads : BasePlugin
                 ["de_dust"] = "Dust II"
             }
         };
-
         File.WriteAllText(configPath,
             JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-
         Console.ForegroundColor = ConsoleColor.DarkGreen;
         Console.WriteLine("[Advertisement] The configuration was successfully saved to a file: " + configPath);
         Console.ResetColor();
-
         return config;
     }
 
@@ -405,22 +363,17 @@ public class Ads : BasePlugin
         var defaultLang = string.Empty;
         if (Config.DefaultLang != null)
             defaultLang = Config.DefaultLang;
-
         if (ip == "127.0.0.1") return defaultLang;
-
         try
         {
             using var reader = new DatabaseReader(Path.Combine(ModuleDirectory, "GeoLite2-Country.mmdb"));
-
             var response = reader.Country(IPAddress.Parse(ip));
-
             return response.Country.IsoCode ?? defaultLang;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"{ex}");
         }
-
         return defaultLang;
     }
 }
@@ -431,7 +384,7 @@ public class Config
     public float? HtmlCenterDuration { get; init; }
     public bool? ShowHtmlWhenDead { get; set; }
     public WelcomeMessage? WelcomeMessage { get; init; }
-    public List<Advertisement> Ads { get; init; }
+    public List<Advertisement> Ads { get; init; } = new List<Advertisement>();
     public List<string>? Panel { get; init; }
     public string? DefaultLang { get; init; }
     public Dictionary<string, Dictionary<string, string>>? LanguageMessages { get; init; }
@@ -455,9 +408,7 @@ public class WelcomeMessage
 public class Advertisement
 {
     public float Interval { get; init; }
-    public List<Dictionary<string, string>> Messages { get; init; } = null!;
-
+    public List<Dictionary<string, string>> Messages { get; init; } = new List<Dictionary<string, string>>();
     private int _currentMessageIndex;
-
     [JsonIgnore] public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
 }
