@@ -16,7 +16,6 @@ LRMini/.idea
 *.cache
 *.editorconfig
 *.dll
-*.json
 *.pdb
 *.CopyComplete
 *.txt
@@ -24,5 +23,7 @@ LRMini/.idea
 Advertisement/.idea
 Advertisement/bin
 Advertisement/obj
+
 Advertisement/addons
+Advertisement/out
 Advertisement/Advertisement.zip

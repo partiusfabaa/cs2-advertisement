@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CounterStrikeSharp.API;
@@ -12,11 +10,11 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Config;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
-using MaxMind.GeoIP2;
 
 namespace Advertisement;
 
@@ -27,26 +25,32 @@ public class User
     public int PrintTime { get; set; }
 }
 
-public class Ads : BasePlugin
+public class Ads : BasePlugin, IPluginConfig<Config>
 {
     public override string ModuleAuthor => "thesamefabius";
     public override string ModuleName => "Advertisement";
-    public override string ModuleVersion => "v1.0.9";
+    public override string ModuleVersion => $"v{typeof(Ads).Assembly.GetName().Version!.ToString(3)}";
 
-    private readonly List<Timer> _timers = new();
-    private readonly Dictionary<ulong, string> _playerIsoCode = new();
-    public Config Config { get; set; } = null!;
+    private readonly List<Timer> _timers = [];
+    private readonly Dictionary<string, CommandInfo.CommandCallback> _adCommands = [];
+
+    public Config Config { get; set; } = new();
     private readonly User?[] _users = new User?[66];
+
+    public void OnConfigParsed(Config config)
+    {
+        Config = config;
+    }
 
     public override void Load(bool hotReload)
     {
-        Config = LoadConfig();
-        Console.WriteLine(Config.Panel == null);
         RegisterEventHandler<EventPlayerConnectFull>(EventPlayerConnectFull);
-        RegisterEventHandler<EventPlayerDisconnect>(EventPlayerDisconnect);
         RegisterListener<Listeners.OnClientAuthorized>(OnClientAuthorized);
         RegisterListener<Listeners.OnTick>(OnTick);
+
         StartTimers();
+        RegisterAdCommands();
+
         if (hotReload)
         {
             foreach (var player in Utilities.GetPlayers())
@@ -56,80 +60,85 @@ public class Ads : BasePlugin
         }
     }
 
-    private HookResult EventPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
+    private void RegisterAdCommands()
     {
-        if (Config.LanguageMessages == null) return HookResult.Continue;
-        var player = @event.Userid;
-        if (player is null) return HookResult.Continue;
-        _playerIsoCode.Remove(player.SteamID);
-        return HookResult.Continue;
+        foreach (var (name, callback) in _adCommands)
+            RemoveCommand(name, callback);
+        _adCommands.Clear();
+
+        foreach (var command in Config.Commands)
+        {
+            foreach (var name in command.Names.Select(c => c.Trim()).Where(c => c.Length > 0))
+            {
+                CommandInfo.CommandCallback callback = (player, _) =>
+                {
+                    if (player is { IsValid: true, IsBot: false })
+                        ShowMessage(command, [player]);
+                };
+
+                if (_adCommands.TryAdd(name, callback))
+                    AddCommand(name, "Shows the advertisement", callback);
+            }
+        }
     }
 
-    private void OnClientAuthorized(int slot, SteamID id)
-    {
-        var player = Utilities.GetPlayerFromSlot(slot);
-        _users[slot] = new User();
-        if (Config.LanguageMessages == null) return;
-        if (player is not null && player.IpAddress != null)
-            _playerIsoCode.TryAdd(id.SteamId64, GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
-    }
+    private void OnClientAuthorized(int slot, SteamID id) => _users[slot] = new User();
 
     private HookResult EventPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
     {
-        if (Config.WelcomeMessage == null) return HookResult.Continue;
+        if (Config.WelcomeMessage == null)
+            return HookResult.Continue;
+
         var player = @event.Userid;
-        if (player is null || !player.IsValid) return HookResult.Continue;
-        var welcomeMsg = Config.WelcomeMessage;
-        var msg = welcomeMsg.Message.Replace("{PLAYERNAME}", player.PlayerName).ReplaceColorTags();
-        PrintWrappedLine(null, msg, player, true);
+        if (player is null || !player.IsValid)
+            return HookResult.Continue;
+
+        ShowWelcomeMessage(player, Config.WelcomeMessage);
         return HookResult.Continue;
     }
 
     private void OnTick()
     {
+        var durationTicks = (Config.HtmlCenterDuration ?? 5) * 64;
         foreach (var player in Utilities.GetPlayers())
         {
             var user = _users[player.Slot];
-            var showWhenDead = Config.ShowHtmlWhenDead;
-            if (user is not null &&
-                user.HtmlPrint &&
-                (showWhenDead is null || showWhenDead == false ||
-                 (showWhenDead == true && !player.PawnIsAlive)))
+            if (user is null || !user.HtmlPrint)
+                continue;
+
+            if (user.PrintTime++ >= durationTicks)
             {
-                var duration = Config.HtmlCenterDuration;
-                if (duration != null && TimeSpan.FromSeconds(user.PrintTime / 64.0).Seconds < duration.Value)
-                {
-                    player.PrintToCenterHtml(user.Message);
-                    user.PrintTime++;
-                }
-                else
-                {
-                    user.HtmlPrint = false;
-                }
+                user.HtmlPrint = false;
+                continue;
             }
+
+            if (Config.ShowHtmlWhenDead == true && player.PawnIsAlive)
+                continue;
+
+            player.PrintToCenterHtml(user.Message);
         }
     }
 
     private void ShowAd(Advertisement ad)
     {
-        var messages = ad.NextMessages;
-        foreach (var (type, message) in messages)
+        var players = Utilities.GetPlayers().Where(u => u is { IsBot: false, IsValid: true }).ToList();
+        ShowMessage(ad.NextMessage, players);
+    }
+
+    private void ShowMessage(AdMessage message, List<CCSPlayerController> players)
+    {
+        foreach (var player in players)
         {
-            switch (type)
-            {
-                case "Chat":
-                    PrintWrappedLine(HudDestination.Chat, message);
-                    break;
-                case "Center":
-                    PrintWrappedLine(HudDestination.Center, message);
-                    break;
-            }
+            if (message.Chat != null)
+                PrintToPlayer(player, HudDestination.Chat, message.Chat);
+            if (message.Center != null)
+                PrintToPlayer(player, HudDestination.Center, message.Center);
         }
     }
 
     private void StartTimers()
     {
-        foreach (var ad in Config.Ads)
+        foreach (var ad in Config.Ads.Where(ad => ad.Messages.Count > 0 && ad.Interval > 0))
         {
             _timers.Add(AddTimer(ad.Interval, () => ShowAd(ad), TimerFlags.REPEAT));
         }
@@ -139,110 +148,80 @@ public class Ads : BasePlugin
     [ConsoleCommand("css_advert_reload", "configuration restart")]
     public void ReloadAdvertConfig(CCSPlayerController? controller, CommandInfo command)
     {
-        Config = LoadConfig();
+        OnConfigParsed(ConfigManager.Load<Config>(Path.GetFileName(ModuleDirectory)));
+
         foreach (var timer in _timers) timer.Kill();
         _timers.Clear();
         StartTimers();
-        if (Config.LanguageMessages != null)
-        {
-            foreach (var player in Utilities.GetPlayers())
-            {
-                if (player.IpAddress == null || player.AuthorizedSteamID == null) continue;
-                _playerIsoCode.TryAdd(player.AuthorizedSteamID.SteamId64,
-                    GetPlayerIsoCode(player.IpAddress.Split(':')[0]));
-            }
-        }
-        const string msg = "\x08[\x0C Advertisement \x08] configuration successfully rebooted!";
+        RegisterAdCommands();
+
+        const string msg = "\x08[\x0C Advertisement \x08] configuration reloaded successfully!";
         if (controller == null)
             Console.WriteLine(msg);
         else
             controller.PrintToChat(msg);
     }
 
-    private void PrintWrappedLine(HudDestination? destination, string message,
-        CCSPlayerController? connectPlayer = null, bool isWelcome = false)
+    private void ShowWelcomeMessage(CCSPlayerController player, WelcomeMessage welcomeMessage)
     {
-        if (connectPlayer != null && !connectPlayer.IsBot && isWelcome)
+        if (player.IsBot)
+            return;
+
+        AddTimer(welcomeMessage.DisplayDelay, () =>
         {
-            var welcomeMessage = Config.WelcomeMessage;
-            if (welcomeMessage is null) return;
-            AddTimer(welcomeMessage.DisplayDelay, () =>
+            if (!player.IsValid)
+                return;
+
+            var processedMessage = ReplaceMessageTags(welcomeMessage.Message, player);
+            switch (welcomeMessage.MessageType)
             {
-                if (connectPlayer == null || !connectPlayer.IsValid) return;
-                var processedMessage = ProcessMessage(message, connectPlayer.SteamID)
-                    .Replace("{PLAYERNAME}", connectPlayer.PlayerName);
-                switch (welcomeMessage.MessageType)
-                {
-                    case MessageType.Chat:
-                        connectPlayer.PrintToChat(processedMessage);
-                        break;
-                    case MessageType.Center:
-                        connectPlayer.PrintToCenter(processedMessage);
-                        break;
-                    case MessageType.CenterHtml:
-                        SetHtmlPrintSettings(connectPlayer, processedMessage);
-                        break;
-                }
-            });
+                case MessageType.Chat:
+                    player.PrintToChat(processedMessage);
+                    break;
+                case MessageType.Center:
+                    player.PrintToCenter(processedMessage);
+                    break;
+                case MessageType.CenterHtml:
+                    SetHtmlPrintSettings(player, processedMessage);
+                    break;
+            }
+        });
+    }
+
+    private void PrintToPlayer(CCSPlayerController player, HudDestination destination, string message)
+    {
+        var processedMessage = ReplaceMessageTags(message, player);
+        if (destination == HudDestination.Chat)
+        {
+            player.PrintToChat($" {processedMessage}");
         }
         else
         {
-            foreach (var player in Utilities.GetPlayers()
-                         .Where(u => !isWelcome && !u.IsBot && u.IsValid))
-            {
-                var processedMessage = ProcessMessage(message, player.SteamID);
-                if (destination == HudDestination.Chat)
-                {
-                    player.PrintToChat($" {processedMessage}");
-                }
-                else
-                {
-                    if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value)
-                        SetHtmlPrintSettings(player, processedMessage);
-                    else
-                        player.PrintToCenter(processedMessage);
-                }
-            }
+            if (Config.PrintToCenterHtml != null && Config.PrintToCenterHtml.Value)
+                SetHtmlPrintSettings(player, processedMessage);
+            else
+                player.PrintToCenter(processedMessage);
         }
     }
 
     private void SetHtmlPrintSettings(CCSPlayerController player, string message)
     {
-        var user = _users[player.Slot];
-        if (user is null)
-        {
-            _users[player.Slot] = new User();
-            return;
-        }
+        var user = _users[player.Slot] ??= new User();
+
         user.HtmlPrint = true;
         user.PrintTime = 0;
         user.Message = message;
     }
 
-    private string ProcessMessage(string message, ulong steamId)
+    private string ReplaceMessageTags(string message, CCSPlayerController? player)
     {
-        if (Config.LanguageMessages == null) return ReplaceMessageTags(message);
-        var matches = Regex.Matches(message, @"\{([^}]*)\}");
-        foreach (Match match in matches)
-        {
-            var tag = match.Groups[0].Value;
-            var tagName = match.Groups[1].Value;
-            if (!Config.LanguageMessages.TryGetValue(tagName, out var language)) continue;
-            var isoCode = _playerIsoCode.TryGetValue(steamId, out var playerCountryIso)
-                ? playerCountryIso
-                : Config.DefaultLang;
-            if (isoCode != null && language.TryGetValue(isoCode, out var tagReplacement))
-                message = message.Replace(tag, tagReplacement);
-            else if (Config.DefaultLang != null &&
-                     language.TryGetValue(Config.DefaultLang, out var defaultReplacement))
-                message = message.Replace(tag, defaultReplacement);
-        }
-        return ReplaceMessageTags(message);
-    }
+        if (player != null && player.IsValid)
+            message = LocalizeMessage(message, player);
 
-    private string ReplaceMessageTags(string message)
-    {
         var mapName = NativeAPI.GetMapName();
+        if (Config.MapsName != null && Config.MapsName.TryGetValue(mapName, out var displayMapName))
+            mapName = displayMapName;
+
         var replacedMessage = message
             .Replace("{MAP}", mapName)
             .Replace("{TIME}", DateTime.Now.ToString("HH:mm:ss"))
@@ -253,142 +232,86 @@ public class Ads : BasePlugin
             .Replace("{MAXPLAYERS}", Server.MaxPlayers.ToString())
             .Replace("{PLAYERS}",
                 Utilities.GetPlayers().Count(u => u.PlayerPawn.Value != null && u.PlayerPawn.Value.IsValid).ToString())
-            .Replace("\n", "\u2029");
-        replacedMessage = replacedMessage.ReplaceColorTags();
-        if (Config.MapsName != null)
-        {
-            foreach (var mapsName in Config.MapsName.Where(mapsName => mapName == mapsName.Key))
-            {
-                return replacedMessage.Replace(mapName, mapsName.Value);
-            }
-        }
+            .Replace("\n", "\u2029")
+            .ReplaceColorTags();
+
+        if (player != null && player.IsValid)
+            replacedMessage = replacedMessage.Replace("{PLAYERNAME}", player.PlayerName);
+
         return replacedMessage;
     }
 
-    private Config LoadConfig()
+    private string LocalizeMessage(string message, CCSPlayerController player)
     {
-        var directory = Path.Combine(Application.RootDirectory, "configs/plugins/Advertisement");
-        Directory.CreateDirectory(directory);
-        var configPath = Path.Combine(directory, "Advertisement.json");
-        if (!File.Exists(configPath)) return CreateConfig(configPath);
-        var config = JsonSerializer.Deserialize<Config>(File.ReadAllText(configPath),
-            new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip })!;
-        return config;
-    }
+        using var culture = new WithTemporaryCulture(player.GetLanguage());
 
-    private Config CreateConfig(string configPath)
-    {
-        var config = new Config
-        {
-            PrintToCenterHtml = false,
-            WelcomeMessage = new WelcomeMessage
+        return Regex.Replace(
+            message,
+            @"\{([^{}]+)\}",
+            match =>
             {
-                //0 - CHAT | 1 - CENTER | 2 - CENTER HTML
-                MessageType = 0,
-                Message = "Welcome, {BLUE}{PLAYERNAME}",
-                DisplayDelay = 5
-            },
-            Ads = new List<Advertisement>
-            {
-                new()
+                try
                 {
-                    Interval = 35,
-                    Messages = new List<Dictionary<string, string>>
-                    {
-                        new()
-                        {
-                            ["Chat"] = "{map_name}",
-                            ["Center"] = "Section 1 Center 1"
-                        },
-                        new()
-                        {
-                            ["Chat"] = "{current_time}"
-                        }
-                    }
-                },
-                new()
-                {
-                    Interval = 40,
-                    Messages = new List<Dictionary<string, string>>
-                    {
-                        new()
-                        {
-                            ["Chat"] = "Section 2 Chat 1"
-                        },
-                        new()
-                        {
-                            ["Chat"] = "Section 2 Chat 2",
-                            ["Center"] = "Section 2 Center 1"
-                        }
-                    }
+                    var localized = Localizer[match.Groups[1].Value];
+                    return localized.ResourceNotFound ? match.Value : localized.Value;
                 }
-            },
-            //Panel = new List<string> { "Panel Advertising 1", "Panel Advertising 2", "Panel Advertising 3" },
-            DefaultLang = "US",
-            LanguageMessages = new Dictionary<string, Dictionary<string, string>>()
-            {
+                catch
                 {
-                    "map_name", new Dictionary<string, string>
-                    {
-                        ["RU"] = "Текущая карта: {MAP}",
-                        ["US"] = "Current map: {MAP}",
-                        ["CN"] = "{GRAY}当前地图: {RED}{MAP}"
-                    }
-                },
-                {
-                    "current_time", new Dictionary<string, string>
-                    {
-                        ["RU"] = "{GRAY}Текущее время: {RED}{TIME}",
-                        ["US"] = "{GRAY}Current time: {RED}{TIME}",
-                        ["CN"] = "{GRAY}当前时间: {RED}{TIME}"
-                    }
+                    return match.Value;
                 }
-            },
-            MapsName = new Dictionary<string, string>
-            {
-                ["de_mirage"] = "Mirage",
-                ["de_dust"] = "Dust II"
-            }
-        };
-        File.WriteAllText(configPath,
-            JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
-        Console.ForegroundColor = ConsoleColor.DarkGreen;
-        Console.WriteLine("[Advertisement] The configuration was successfully saved to a file: " + configPath);
-        Console.ResetColor();
-        return config;
-    }
-
-    private string GetPlayerIsoCode(string ip)
-    {
-        var defaultLang = string.Empty;
-        if (Config.DefaultLang != null)
-            defaultLang = Config.DefaultLang;
-        if (ip == "127.0.0.1") return defaultLang;
-        try
-        {
-            using var reader = new DatabaseReader(Path.Combine(ModuleDirectory, "GeoLite2-Country.mmdb"));
-            var response = reader.Country(IPAddress.Parse(ip));
-            return response.Country.IsoCode ?? defaultLang;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"{ex}");
-        }
-        return defaultLang;
+            });
     }
 }
 
-public class Config
+public class Config : IBasePluginConfig
 {
-    public bool? PrintToCenterHtml { get; init; }
-    public float? HtmlCenterDuration { get; init; }
+    public bool? PrintToCenterHtml { get; init; } = false;
+    public float? HtmlCenterDuration { get; init; } = 5;
     public bool? ShowHtmlWhenDead { get; set; }
-    public WelcomeMessage? WelcomeMessage { get; init; }
-    public List<Advertisement> Ads { get; init; } = new List<Advertisement>();
+
+    public WelcomeMessage? WelcomeMessage { get; init; } = new WelcomeMessage
+    {
+        //0 - CHAT | 1 - CENTER | 2 - CENTER HTML
+        MessageType = 0,
+        Message = "Welcome, {BLUE}{PLAYERNAME}",
+        DisplayDelay = 5
+    };
+
+    public List<Advertisement> Ads { get; init; } =
+    [
+        new()
+        {
+            Interval = 35,
+            Messages =
+            [
+                new()
+                {
+                    Chat = "Section 1 Chat 1",
+                    Center = "Section 1 Center 1"
+                },
+                new()
+                {
+                    Chat = "{current_map} {BLUE}{MAP}"
+                },
+                new()
+                {
+                    Chat = "{current_time} {RED}{TIME}"
+                }
+            ]
+        },
+    ];
+
+    public List<AdCommand> Commands { get; init; } = [];
+
     public List<string>? Panel { get; init; }
-    public string? DefaultLang { get; init; }
-    public Dictionary<string, Dictionary<string, string>>? LanguageMessages { get; init; }
-    public Dictionary<string, string>? MapsName { get; init; }
+
+    public Dictionary<string, string>? MapsName { get; init; } = new()
+    {
+        ["de_mirage"] = "Mirage",
+        ["de_dust"] = "Dust II"
+    };
+
+    public int Version { get; set; } = 1;
 }
 
 public enum MessageType
@@ -408,7 +331,22 @@ public class WelcomeMessage
 public class Advertisement
 {
     public float Interval { get; init; }
-    public List<Dictionary<string, string>> Messages { get; init; } = new List<Dictionary<string, string>>();
+    public List<AdMessage> Messages { get; init; } = [];
     private int _currentMessageIndex;
-    [JsonIgnore] public Dictionary<string, string> NextMessages => Messages[_currentMessageIndex++ % Messages.Count];
+    [JsonIgnore] public AdMessage NextMessage => Messages[_currentMessageIndex++ % Messages.Count];
+}
+
+public class AdMessage
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Chat { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Center { get; init; }
+}
+
+public class AdCommand : AdMessage
+{
+    [JsonPropertyOrder(-1)]
+    public List<string> Names { get; init; } = [];
 }
