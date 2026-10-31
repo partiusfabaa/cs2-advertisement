@@ -52,7 +52,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.plan.outputs.tag }}
         run: |
-          gh release create "$TAG" Advertisement/out/Advertisement.zip \
+          gh release create "$TAG" Advertisement/out/Advertisement.zip Advertisement/out/Advertisement-Panorama-Workshop.zip \
             --target "$GITHUB_SHA" \
             --title "$TAG" \
             --generate-notes

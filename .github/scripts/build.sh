@@ -16,8 +16,10 @@ dotnet publish Advertisement.csproj "${props[@]}" -o "$publish"
 pkg="$out/pkg/addons/counterstrikesharp/plugins/Advertisement"
 mkdir -p "$pkg"
 cp "$publish"/Advertisement.{dll,pdb,deps.json} "$pkg/"
+cp "$publish"/PanoramaManager.dll "$pkg/"
 cp -r lang "$pkg/lang"
 (cd "$out/pkg" && zip -qr "$out/Advertisement.zip" addons)
+(cd workshop && zip -qr "$out/Advertisement-Panorama-Workshop.zip" README.md content)
 
 echo "Packed:"
 ls -la "$out"/*.zip

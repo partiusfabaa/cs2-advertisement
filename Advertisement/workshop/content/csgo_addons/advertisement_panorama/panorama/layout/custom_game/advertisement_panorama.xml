@@ -1,0 +1,29 @@
+<root>
+    <styles>
+        <include src="s2r://panorama/styles/custom_game/advertisement_panorama.vcss_c" />
+    </styles>
+    <Panel class="screen">
+        <Panel id="AdvertisementRoot" class="screen">
+            <Panel id="AdvertisementCard" class="card">
+                <Panel class="message-row">
+                    <Label id="AdvertisementText0" class="message hidden" text="{s:message0}" />
+                    <Label id="AdvertisementText1" class="message hidden" text="{s:message1}" />
+                    <Label id="AdvertisementText2" class="message hidden" text="{s:message2}" />
+                    <Label id="AdvertisementText3" class="message hidden" text="{s:message3}" />
+                    <Label id="AdvertisementText4" class="message hidden" text="{s:message4}" />
+                    <Label id="AdvertisementText5" class="message hidden" text="{s:message5}" />
+                    <Label id="AdvertisementText6" class="message hidden" text="{s:message6}" />
+                    <Label id="AdvertisementText7" class="message hidden" text="{s:message7}" />
+                    <Label id="AdvertisementText8" class="message hidden" text="{s:message8}" />
+                    <Label id="AdvertisementText9" class="message hidden" text="{s:message9}" />
+                    <Label id="AdvertisementText10" class="message hidden" text="{s:message10}" />
+                    <Label id="AdvertisementText11" class="message hidden" text="{s:message11}" />
+                    <Label id="AdvertisementText12" class="message hidden" text="{s:message12}" />
+                    <Label id="AdvertisementText13" class="message hidden" text="{s:message13}" />
+                    <Label id="AdvertisementText14" class="message hidden" text="{s:message14}" />
+                    <Label id="AdvertisementText15" class="message hidden" text="{s:message15}" />
+                </Panel>
+            </Panel>
+        </Panel>
+    </Panel>
+</root>

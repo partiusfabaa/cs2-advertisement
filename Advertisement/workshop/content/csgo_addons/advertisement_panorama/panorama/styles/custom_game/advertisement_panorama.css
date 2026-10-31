@@ -1,0 +1,82 @@
+.screen {
+    width: 100%;
+    height: 100%;
+    z-index: 99999;
+}
+
+#AdvertisementRoot.hidden {
+    visibility: collapse;
+}
+
+#AdvertisementCard {
+    width: fit-children;
+    height: fit-children;
+    max-width: 90%;
+    padding: 16px 28px;
+    margin-top: 140px;
+    horizontal-align: center;
+    vertical-align: top;
+    visibility: collapse;
+    transform: translateX(-3000px);
+    opacity: 0;
+    background-color: #111820dc;
+    border: 1px solid #ffffff24;
+    border-radius: 4px;
+    box-shadow: #00000055 0px 2px 6px 0px;
+    transition-property: transform, opacity;
+    transition-duration: 0.45s;
+    transition-timing-function: ease-out;
+}
+
+#AdvertisementCard.show {
+    visibility: visible;
+}
+
+#AdvertisementCard.enter {
+    transform: translateX(0px);
+    opacity: 1;
+}
+
+#AdvertisementCard.exit {
+    transform: translateX(3000px);
+    opacity: 0;
+    transition-timing-function: ease-in;
+}
+
+.message-row {
+    flow-children: right;
+    horizontal-align: center;
+    max-width: 100%;
+}
+
+.message {
+    max-width: 100%;
+    color: #f1f3f5;
+    font-family: Stratum2;
+    font-size: 36px;
+    text-align: center;
+    text-overflow: shrink;
+}
+
+.message.hidden { visibility: collapse; }
+.message.color-default { color: #f1f3f5; }
+.message.color-white { color: #ffffff; }
+.message.color-darkred { color: #b03030; }
+.message.color-green { color: #40e080; }
+.message.color-lightyellow { color: #fff4a3; }
+.message.color-lightblue { color: #9ddcff; }
+.message.color-olive { color: #a5a54b; }
+.message.color-lime { color: #b5ff40; }
+.message.color-red { color: #ff5050; }
+.message.color-lightpurple { color: #d9a5ff; }
+.message.color-purple { color: #b875ff; }
+.message.color-grey { color: #a5a5a5; }
+.message.color-yellow { color: #ffe040; }
+.message.color-gold { color: #ffc14d; }
+.message.color-silver { color: #d5d5d5; }
+.message.color-blue { color: #508fff; }
+.message.color-darkblue { color: #5865db; }
+.message.color-bluegrey { color: #99adc4; }
+.message.color-magenta { color: #ff60d5; }
+.message.color-lightred { color: #ff9999; }
+.message.color-orange { color: #ffab40; }
