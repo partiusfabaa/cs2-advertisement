@@ -1,6 +1,8 @@
 <div align="center">
 
 # cs2-advertisement
+<img width="1397" height="843" alt="image" src="https://github.com/user-attachments/assets/479f2033-44fa-4538-9cc2-6b3d1b614c19" />
+
 
 A [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) plugin for CS2 that shows advertisements, a welcome message and server info in chat or in the center of the screen.
 
