@@ -12,7 +12,7 @@
     width: fit-children;
     height: fit-children;
     max-width: 90%;
-    padding: 16px 28px;
+    padding: 10px 18px;
     margin-top: 140px;
     horizontal-align: center;
     vertical-align: top;
@@ -53,7 +53,7 @@
     max-width: 100%;
     color: #f1f3f5;
     font-family: Stratum2;
-    font-size: 36px;
+    font-size: 24px;
     text-align: center;
     text-overflow: shrink;
 }
