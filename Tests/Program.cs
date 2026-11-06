@@ -27,7 +27,8 @@ for (var index = 0; index < PanoramaText.MaxRuns; index++)
 
 var css = File.ReadAllText(Path.Combine(panorama, "styles", "custom_game", "advertisement_panorama.css"));
 if (!css.Contains("width: fit-children;") || !css.Contains("height: fit-children;")
-    || !css.Contains("max-width: 90%;") || css.Contains("width: 880px;"))
+    || !css.Contains("max-width: 90%;") || !css.Contains("padding: 10px 18px;")
+    || !css.Contains("font-size: 22px;") || css.Contains("font-size: 36px;"))
     throw new Exception("Card must fit its contents rather than use the original fixed width.");
 var colors = new[] { "DEFAULT", "WHITE", "DARKRED", "GREEN", "LIGHTYELLOW", "LIGHTBLUE", "OLIVE",
     "LIME", "RED", "LIGHTPURPLE", "PURPLE", "GREY", "YELLOW", "GOLD", "SILVER", "BLUE", "DARKBLUE",

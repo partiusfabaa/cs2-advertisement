@@ -266,6 +266,7 @@ public class Ads : BasePlugin, IPluginConfig<Config>
             new LayoutContract
             {
                 RootPanelId = "AdvertisementRoot",
+                RowCount = 0,
                 CaptureInput = false
             });
     }
