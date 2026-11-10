@@ -27,7 +27,7 @@ A [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) plugin 
 
 ## Installation
 
-1. Install [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master) and [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).
+1. Install [Metamod:Source](https://www.sourcemm.net/downloads.php/?branch=master) and [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) `1.0.378` or newer with its .NET 10 runtime.
 2. Download `Advertisement.zip` from the [latest release](https://github.com/partiusfabaa/cs2-advertisement/releases/latest).
 3. Unpack it into `game/csgo/` on the server: the plugin goes to `addons/counterstrikesharp/plugins/Advertisement`.
 4. Start the server. The config is created at `addons/counterstrikesharp/configs/plugins/Advertisement/Advertisement.json`.
@@ -57,10 +57,10 @@ Your own commands from the `Commands` section of the config are added on top of 
 | `HtmlCenterDuration` | `5` | How long an HTML center message stays on screen, in seconds |
 | `ShowHtmlWhenDead` | `false` | `true` shows HTML center messages only to dead players |
 | `PanoramaEnabled` | `false` | Enables Panorama ads; requires the Workshop addon on clients |
-| `PanoramaInterval` | `60` | Seconds between Panorama messages (minimum `1`) |
+| `PanoramaInterval` | `60` | Seconds between Panorama messages (minimum `1`); allow at least `PanoramaDuration + 0.95` for a complete animation |
 | `PanoramaDuration` | `2` | Seconds the Panorama card stays centered before sliding away |
 | `PanoramaMessages` | Two example messages | Panorama card messages, shown in rotation; use `[]` to disable the rotation |
-| `WelcomeMessage` | | Message shown after a player joins. Remove it to turn it off |
+| `WelcomeMessage` | | Message shown after a player joins. Set to `null` to disable; omitting the field retains the default welcome |
 | `WelcomeMessage.MessageType` | `0` | `0` chat, `1` center, `2` center HTML |
 | `WelcomeMessage.DisplayDelay` | `5` | Delay in seconds after the player joins |
 | `Ads` | | Ad groups. Each group shows its next message every `Interval` seconds |
@@ -124,11 +124,15 @@ Your own commands from the `Commands` section of the config are added on top of 
 }
 ```
 
-Panorama cards slide in from the left below the score HUD (140px from the top), stay centered for `PanoramaDuration`, then slide out to the right. Their width and height fit the text, up to 90% of the screen width, with 22px text and 10px × 18px padding. They reuse the normal placeholders and translations, and support the same color tags as chat: `"{RED}Important: {GREEN}Welcome, {DEFAULT}{PLAYERNAME}!"`. A tag changes the color until the next tag; `{DEFAULT}` resets it. Up to 16 differently colored text segments are supported. Messages exceeding that limit are displayed completely in the default color with a console warning. Keep messages short enough for a single card row. No HTML is needed or interpreted. The Workshop source files and publishing steps are in [Advertisement/workshop](Advertisement/workshop).
+Panorama cards slide in from the left below the score HUD (140px from the top), stay centered for `PanoramaDuration`, then slide out to the right. Their width and height fit the text, up to 90% of the screen width, with 24px text and 10px × 18px padding. They reuse the normal placeholders and translations, and support the same color tags as chat: `"{RED}Important: {GREEN}Welcome, {DEFAULT}{PLAYERNAME}!"`. A tag changes the color until the next tag; `{DEFAULT}` resets it. Up to 16 differently colored text segments are supported. Messages exceeding that limit are displayed completely in the default color with a console warning. Keep messages short enough for a single card row. No HTML is needed or interpreted. The Workshop source files and publishing steps are in [Advertisement/workshop](Advertisement/workshop).
+
+The full Panorama animation takes `PanoramaDuration + 0.95` seconds. A shorter `PanoramaInterval` interrupts the previous card with the next one. The plugin warns about this when loading or reloading an active Panorama configuration and preserves your chosen timing.
+
+To disable welcome messages, set `"WelcomeMessage": null`. Omitting the field uses the default welcome. A `null`, empty or whitespace-only `WelcomeMessage.Message` disables only the welcome message and logs a warning; rotating ads and ad commands continue to work.
 
 Newly generated configs include two sample Panorama messages, with `PanoramaEnabled` set to `false`. Existing config files are not overwritten: add the Panorama fields from the example above manually if they are missing, or replace an empty `PanoramaMessages` array with your messages, then run `css_advert_reload`. Enable Panorama only after installing the Workshop addon.
 
-The plugin creates its HUD layout only when `PanoramaEnabled` is `true` and `PanoramaMessages` has at least one non-empty entry. Panorama support requires CounterStrikeSharp `1.0.374` or newer. If a client does not have the Workshop addon, that client will not see Panorama cards; regular chat and center ads continue to work. Build and publish the Workshop addon using [its README](Advertisement/workshop/README.md).
+The plugin creates its HUD layout only when `PanoramaEnabled` is `true` and `PanoramaMessages` has at least one non-empty entry. The current plugin build requires CounterStrikeSharp `1.0.378` or newer and .NET 10. If a client does not have the Workshop addon, that client will not see Panorama cards; regular chat and center ads continue to work. Build and publish the Workshop addon using [its README](Advertisement/workshop/README.md).
 
 The plugin bundles PanoramaManager `0.4.4`, which uses CounterStrikeSharp's custom HUD API rather than its own signature scanning. When upgrading from the original Panorama integration, replace both `Advertisement.dll` and `PanoramaManager.dll` (and `Advertisement.deps.json`) in the plugin directory, then restart the server or reload the plugin. No `panoramamanager.json` is required by this version. Recompile and republish the Workshop addon when its layout files change.
 

@@ -29,3 +29,5 @@ Advertisement/out
 Advertisement/Advertisement.zip
 Tests/bin/
 Tests/obj/
+Tests/Runtime/bin/
+Tests/Runtime/obj/

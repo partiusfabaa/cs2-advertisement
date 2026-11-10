@@ -10,7 +10,7 @@ This folder contains the Panorama layout source files for the Advertisement plug
 
 The plugin creates the `custom_hud_layout` entity and updates it from the server. No map entity or client-side script is needed. Clients without the published addon simply do not have the layout to display; the plugin itself continues running and its chat/center ads are unaffected.
 
-The card is centered horizontally, 140 Panorama pixels from the top to leave space for the score HUD. Its width and height fit the text content, with a maximum width of 90% of the screen, 10px vertical / 18px horizontal padding and 22px text. Short messages get compact cards; longer messages get wider cards up to the screen limit. Position and size changes require recompiling and republishing the addon, not reloading the plugin config.
+The card is centered horizontally, 140 Panorama pixels from the top to leave space for the score HUD. Its width and height fit the text content, with a maximum width of 90% of the screen, 10px vertical / 18px horizontal padding and 24px text. Short messages get compact cards; longer messages get wider cards up to the screen limit. Position and size changes require recompiling and republishing the addon, not reloading the plugin config.
 
 If Panorama ads are disabled or `PanoramaMessages` is empty, the plugin does not create the layout entity.
 
